@@ -18,6 +18,7 @@ class CheckpointScore:
     passes_anti_blur: bool
     passes_rain_activity: bool
     beats_persistence_day4: bool
+    release_eligible: bool
 
 
 def score_checkpoint(
@@ -57,13 +58,14 @@ def score_checkpoint(
         passes_anti_blur=bool(passes_anti_blur),
         passes_rain_activity=bool(passes_rain_activity),
         beats_persistence_day4=beats_persistence,
+        release_eligible=bool(eligible and beats_persistence),
     )
 
 
 def is_better(candidate: CheckpointScore, incumbent: CheckpointScore | None) -> bool:
-    if not candidate.valid:
+    if not candidate.release_eligible:
         return False
-    if incumbent is None or not incumbent.valid:
+    if incumbent is None or not incumbent.release_eligible:
         return True
     return candidate.aggregate_normalized_rmse < incumbent.aggregate_normalized_rmse
 

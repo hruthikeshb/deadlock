@@ -13,6 +13,25 @@ class LossBreakdown:
     total: torch.Tensor
     per_lead: torch.Tensor
     per_channel: torch.Tensor
+    rain_occurrence: torch.Tensor
+    rain_tail: torch.Tensor
+
+
+@dataclass(frozen=True)
+class RainLossConfig:
+    threshold_mm: float = 10.0
+    occurrence_weight: float = 0.0
+    tail_weight: float = 0.0
+    occurrence_temperature_mm: float = 2.0
+    max_positive_class_weight: float = 20.0
+
+    def validate(self) -> None:
+        if self.threshold_mm <= 0 or self.occurrence_temperature_mm <= 0:
+            raise ValueError("rain thresholds/temperature must be positive")
+        if self.occurrence_weight < 0 or self.tail_weight < 0:
+            raise ValueError("rain loss weights must be nonnegative")
+        if self.max_positive_class_weight < 1:
+            raise ValueError("positive-class cap must be at least one")
 
 
 def normalized_lead_weights(horizon: int, mode: str = "uniform") -> torch.Tensor:
@@ -33,6 +52,7 @@ def rollout_huber_loss(
     channel_scale: torch.Tensor,
     lead_weights: torch.Tensor | None = None,
     beta: float = 1.0,
+    rain: RainLossConfig | None = None,
 ) -> LossBreakdown:
     """Channel-balanced physical error over every trained autoregressive lead."""
     if prediction_physical.shape != target_physical.shape:
@@ -72,7 +92,46 @@ def rollout_huber_loss(
         if not torch.isfinite(weights).all() or weights.sum() <= 0:
             raise ValueError("lead_weights must be finite with positive sum")
         weights = weights / weights.sum()
-    return LossBreakdown(total=(per_lead * weights).sum(), per_lead=per_lead, per_channel=per_channel)
+    base_total = (per_lead * weights).sum()
+    rain_config = rain or RainLossConfig()
+    rain_config.validate()
+    predicted_rain = prediction_physical[:, :, 1]
+    target_rain = target_physical[:, :, 1]
+    event = (target_rain > rain_config.threshold_mm).to(prediction_physical.dtype)
+    event_count = event.sum()
+    non_event_count = event.numel() - event_count
+    positive_weight = torch.clamp(
+        non_event_count / torch.clamp(event_count, min=1.0),
+        min=1.0,
+        max=rain_config.max_positive_class_weight,
+    )
+    occurrence_logits = (
+        predicted_rain - rain_config.threshold_mm
+    ) / rain_config.occurrence_temperature_mm
+    occurrence_loss = F.binary_cross_entropy_with_logits(
+        occurrence_logits,
+        event,
+        pos_weight=positive_weight,
+    )
+    tail_error = F.smooth_l1_loss(
+        predicted_rain / scale[1],
+        target_rain / scale[1],
+        reduction="none",
+        beta=beta,
+    )
+    tail_loss = (tail_error * event).sum() / torch.clamp(event_count, min=1.0)
+    total = (
+        base_total
+        + rain_config.occurrence_weight * occurrence_loss
+        + rain_config.tail_weight * tail_loss
+    )
+    return LossBreakdown(
+        total=total,
+        per_lead=per_lead,
+        per_channel=per_channel,
+        rain_occurrence=occurrence_loss,
+        rain_tail=tail_loss,
+    )
 
 
 def curriculum_horizon(epoch: int, boundaries: tuple[int, int, int] = (3, 6, 10)) -> int:

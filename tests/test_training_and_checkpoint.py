@@ -9,7 +9,12 @@ torch = pytest.importorskip("torch")
 
 from deadlock_monsoon.checkpoint import export_grast_bundle, load_grast_bundle
 from deadlock_monsoon.model import GRAST, GRASTConfig
-from deadlock_monsoon.training import curriculum_horizon, normalized_lead_weights, rollout_huber_loss
+from deadlock_monsoon.training import (
+    RainLossConfig,
+    curriculum_horizon,
+    normalized_lead_weights,
+    rollout_huber_loss,
+)
 
 
 def test_lead_weights_and_curriculum_are_explicit():
@@ -25,6 +30,8 @@ def test_rollout_loss_reports_every_lead_and_channel_and_backpropagates():
     result = rollout_huber_loss(prediction, target, torch.ones(6))
     assert result.per_lead.shape == (4,)
     assert result.per_channel.shape == (6,)
+    assert torch.isfinite(result.rain_occurrence)
+    assert torch.isfinite(result.rain_tail)
     result.total.backward()
     assert prediction.grad is not None and torch.isfinite(prediction.grad).all()
 
@@ -67,4 +74,31 @@ def test_bundle_round_trip_and_hash_guard(tmp_path):
     manifest_path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ValueError, match="hash"):
         load_grast_bundle(tmp_path)
+
+
+def test_rain_objective_penalizes_missing_heavy_rain_more_than_base_loss():
+    prediction = torch.zeros(1, 2, 6, 32, 36)
+    target = torch.zeros_like(prediction)
+    target[:, :, 1, 4:8, 4:8] = 25.0
+    base = rollout_huber_loss(prediction, target, torch.ones(6)).total
+    aware = rollout_huber_loss(
+        prediction,
+        target,
+        torch.ones(6),
+        rain=RainLossConfig(occurrence_weight=0.2, tail_weight=0.5),
+    ).total
+    assert aware > base
+
+
+def test_rain_objective_remains_finite_without_events():
+    prediction = torch.zeros(1, 2, 6, 32, 36)
+    target = torch.zeros_like(prediction)
+    result = rollout_huber_loss(
+        prediction,
+        target,
+        torch.ones(6),
+        rain=RainLossConfig(occurrence_weight=0.2, tail_weight=0.5),
+    )
+    assert torch.isfinite(result.total)
+    assert result.rain_tail == 0
 

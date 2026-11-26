@@ -27,7 +27,7 @@ from deadlock_monsoon.model import GRAST, GRASTConfig, SemanticOutputMapper, par
 from deadlock_monsoon.selection import is_better, score_checkpoint
 from deadlock_monsoon.torch_rollout import autoregressive_rollout
 from deadlock_monsoon.train_data import ForecastWindowDataset
-from deadlock_monsoon.training import normalized_lead_weights, rollout_huber_loss
+from deadlock_monsoon.training import RainLossConfig, normalized_lead_weights, rollout_huber_loss
 
 LEADS = (1, 4, 8, 10)
 
@@ -132,25 +132,35 @@ def run(args: argparse.Namespace) -> dict:
         horizon = horizons[min(epoch, len(horizons) - 1)]
         model.train()
         losses = []
+        occurrence_losses = []
+        tail_losses = []
         weights = normalized_lead_weights(horizon, args.lead_weights)
+        rain_loss = RainLossConfig(
+            occurrence_weight=args.rain_occurrence_weight,
+            tail_weight=args.rain_tail_weight,
+        )
         for batch in train_loader:
             prediction = autoregressive_rollout(
                 model, mapper, batch["history"], batch["static"], batch["doy_sincos"],
                 horizon, mean, scale,
             )
             breakdown = rollout_huber_loss(
-                prediction, batch["target"][:, :horizon], scale, weights
+                prediction, batch["target"][:, :horizon], scale, weights, rain=rain_loss
             )
             optimizer.zero_grad(set_to_none=True)
             breakdown.total.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
             optimizer.step()
             losses.append(float(breakdown.total.detach()))
+            occurrence_losses.append(float(breakdown.rain_occurrence.detach()))
+            tail_losses.append(float(breakdown.rain_tail.detach()))
         validation, selection = evaluate(model, mapper, validation_loader, mean, scale)
         record = {
             "epoch": epoch + 1,
             "trained_horizon": horizon,
             "train_loss": float(np.mean(losses)),
+            "rain_occurrence_loss": float(np.mean(occurrence_losses)),
+            "rain_tail_loss": float(np.mean(tail_losses)),
             "validation": validation,
         }
         records.append(record)
@@ -167,6 +177,11 @@ def run(args: argparse.Namespace) -> dict:
         "train_windows": args.train_windows,
         "validation_windows": args.validation_windows,
         "lead_weights": args.lead_weights,
+        "rain_loss": {
+            "occurrence_weight": args.rain_occurrence_weight,
+            "tail_weight": args.rain_tail_weight,
+            "threshold_mm": 10.0,
+        },
         "best_epoch": best_epoch,
         "best_selection": None if best_score is None else asdict(best_score),
         "checkpoint": str(args.checkpoint),
@@ -190,6 +205,8 @@ def main() -> None:
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--lead-weights", choices=("uniform", "mild_increase"), default="uniform")
+    parser.add_argument("--rain-occurrence-weight", type=float, default=0.0)
+    parser.add_argument("--rain-tail-weight", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--threads", type=int, default=4)
     args = parser.parse_args()
