@@ -31,7 +31,13 @@ Authoritative requirements: `docs/PRODUCT_REQUIREMENTS.md`
 2. Benchmark explicit steps 1/10/14, cold start, peak RSS, response size, eight-call soak, network-disabled execution, and read-only repository behavior on four CPU cores.
 3. Only after items 1–2 pass, perform the one-time locked 2020–2021 test evaluation and freeze the candidate. Do not tune after viewing locked-test results.
 4. Complete attribution and README commands, then run a clean-clone release rehearsal.
-5. Build the separate live dashboard and required two-page brief after the inference artifact and API are frozen; this is the one missing repository-scanner point.
+
+## Explicitly excluded from this workstream
+
+- Dashboard/frontend implementation (the one currently missing repository-scanner point).
+- Two-page competition brief/presentation production.
+
+These were removed from the active implementation scope by team direction on 2026-11-26. They may be completed separately by teammates, but this workstream will not spend engineering time on them.
 
 ## Stop rules
 
