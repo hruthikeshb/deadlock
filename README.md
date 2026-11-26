@@ -49,5 +49,5 @@ This prototype proves that the shared rollout trains and preserves basic physica
 4. Time-box the bounded transport/residual gate against learned-only and additive controls.
 5. Export primary and independent fallback artifacts without runtime downloads.
 
-See [docs/WORKSTREAMS.md](docs/WORKSTREAMS.md) for ownership and gates.
+Detailed planning documents and generated experiment evidence are maintained outside the submission repository. This repository keeps only executable source, essential tests, configuration, required artifacts, attribution, and operating instructions.
 
