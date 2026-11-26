@@ -1,0 +1,41 @@
+{
+  "artifact": "artifacts/primary",
+  "dataset_sha256": "f37bdbd0bd44e6fe951adf36c9a08620075f9d17de391b04c97d61f06797903b",
+  "partition": "validation",
+  "histories": 4,
+  "channels": {
+    "t2m": 64,
+    "tp": 50,
+    "u10": 64,
+    "v10": 64,
+    "msl": 64,
+    "tcwv": 64
+  },
+  "locations": {
+    "interior": 90,
+    "north_boundary": 92,
+    "fractional_coast": 94,
+    "high_terrain": 94
+  },
+  "magnitudes_training_std": [0.25, 1.0],
+  "signs": [-1, 1],
+  "scenario_count": 370,
+  "skipped_negative_rain_on_dry_patch": 14,
+  "null_exact": true,
+  "all_finite": true,
+  "all_physical": true,
+  "all_nonzero": true,
+  "all_stable": true,
+  "maximum_response_std": 1.005162965894706,
+  "minimum_day1_near_fraction": 0.8904708597303055,
+  "median_near_fraction": {
+    "day1": 0.9995012124662431,
+    "day10": 0.9844846235298091
+  },
+  "median_radius_cells": {
+    "day1": 1.1951711333924269,
+    "day10": 1.984924353066522
+  },
+  "decision": "pass",
+  "notes": "Skipped cases had less than 0.01 training-standard-deviation valid negative-rain amplitude because the source patch was nearly dry. No evaluated failure was discarded."
+}
