@@ -26,6 +26,6 @@ The repository is split by stable interfaces so tracks can progress in parallel 
 2. **Complete:** verified dataset loader, split/window index, and train-only transform foundation.
 3. **Complete:** persistence and calendar-day climatology evaluation at days 1/4/8/10.
 4. **Complete as a tested model seam:** learned-only residual transition, semantic rain/temperature mapping, seasonal advancement, and self-fed rollout.
-5. **Next:** progressive multi-step training, rain/extreme diagnostics, checkpoint manifests, and fallback export.
+5. **In progress:** rollout-aware Huber loss, explicit lead weighting/curriculum, and hash-verified checkpoint manifests are complete; real-data loader/trainer and fallback export are next.
 6. **Later P1:** three-hour maximum gated-transport experiment; gate off unless it clearly earns retention.
 

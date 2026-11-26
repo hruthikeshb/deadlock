@@ -263,11 +263,13 @@ The repository uses a thin-root, package-first architecture. Judge-facing servin
 | Learned-only GRAST control | `src/deadlock_monsoon/model.py` | Implemented as untrained seam; nonperiodic multiscale residual core, 265,062 parameters |
 | Semantic physical outputs | `SemanticOutputMapper` in `model.py` | Implemented; absolute `softplus` rain, bounded absolute temperature, physical residual channels |
 | Shared multi-step recursion | `src/deadlock_monsoon/torch_rollout.py` | Implemented as differentiable seam; same weights, perturb once, history shift, seasonal advance |
-| Automated verification | `tests/` | 35 tests passing at v1.2 ledger update; official schema validator passed all list/b64 scenarios |
+| Rollout-aware objective | `src/deadlock_monsoon/training.py` | Implemented; normalized channel-balanced Huber, explicit uniform/mild lead weights, logged 2→4→8→10 curriculum |
+| Artifact provenance and loading | `src/deadlock_monsoon/checkpoint.py` | Implemented; state-dict-only primary/fallback bundles, config/split/train-stat provenance, SHA-256 verification, CPU load |
+| Automated verification | `tests/` | 39 tests passing at v1.2 ledger update; official schema validator passed all list/b64 scenarios |
 | Runtime/training dependency separation | `pyproject.toml` | Implemented; minimal runtime, optional `dev` and `train` groups |
 | Ownership and sequencing | `docs/WORKSTREAMS.md` | Implemented; P0/P1 boundaries and next gate recorded |
 
-Current architectural state is a valid persistence-serving fallback plus an untrained learned-model seam. It is **not** a competition-ready forecast claim. The next authorized chunk is progressive multi-step training, lead-aware loss, checkpoint manifests, tiny-overfit proof, and independently loadable primary/fallback export. The bounded transport gate is not yet implemented and may begin only after the learned-only P0 path is stable.
+Current architectural state is a valid persistence-serving fallback plus an untrained learned-model seam, rollout-aware loss, explicit curriculum, and hash-verified artifact format. It is **not** a competition-ready forecast claim. The next authorized chunk is the real-data training dataset/loader, reproducible trainer, tiny-subset overfit proof, and independently loadable primary/fallback exports. The bounded transport gate is not yet implemented and may begin only after the learned-only P0 path is stable.
 
 ## 21. Custom algorithms and research contributions
 
