@@ -1,0 +1,35 @@
+{
+  "status": "scaled challenger; not promoted pending seeds 7 and 29",
+  "seed": 17,
+  "train_windows": 1024,
+  "validation_windows": 256,
+  "best_epoch": 4,
+  "temperature_mode": "bounded_residual",
+  "temperature_tendency_factor": 0.05,
+  "aggregate_normalized_rmse": 0.5032670146845066,
+  "normalized_rmse": {
+    "day1": 0.3382730264190518,
+    "day4": 0.5220693549069284,
+    "day8": 0.568711481504185,
+    "day10": 0.5840141959078613
+  },
+  "temperature_rmse_k": {
+    "day1": 1.006,
+    "day4": 1.880,
+    "day8": 2.323,
+    "day10": 2.495
+  },
+  "temperature_skill_vs_persistence_percent": {
+    "day1": 0.2,
+    "day4": -0.4,
+    "day8": -5.3,
+    "day10": -8.4
+  },
+  "rain_csi": {
+    "day1": 0.462,
+    "day4": 0.325,
+    "day8": 0.283,
+    "day10": 0.281
+  },
+  "all_current_joint_gates_pass": true
+}

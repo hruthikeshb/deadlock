@@ -166,9 +166,16 @@ def run(args: argparse.Namespace) -> dict:
         rain_mode=args.rain_mode,
         static_channels=train_data.static.shape[0],
         rain_occurrence_prior=train_rain_occurrence_prior,
+        temperature_mode=args.temperature_mode,
+        temperature_tendency_factor=args.temperature_tendency_factor,
     )
     model = GRAST(config)
-    mapper = SemanticOutputMapper(torch.from_numpy(transform.scale), rain_mode=args.rain_mode)
+    mapper = SemanticOutputMapper(
+        torch.from_numpy(transform.scale),
+        rain_mode=args.rain_mode,
+        temperature_mode=args.temperature_mode,
+        temperature_tendency_factor=args.temperature_tendency_factor,
+    )
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
     mean = torch.from_numpy(transform.mean)
     scale = torch.from_numpy(transform.scale)
@@ -276,6 +283,12 @@ def main() -> None:
     )
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument(
+        "--temperature-mode",
+        choices=("absolute", "bounded_residual"),
+        default="bounded_residual",
+    )
+    parser.add_argument("--temperature-tendency-factor", type=float, default=0.05)
     parser.add_argument("--lead-weights", choices=("uniform", "mild_increase"), default="uniform")
     parser.add_argument("--rain-occurrence-weight", type=float, default=0.0)
     parser.add_argument("--rain-tail-weight", type=float, default=0.0)

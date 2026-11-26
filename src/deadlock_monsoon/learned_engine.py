@@ -22,6 +22,8 @@ class GRASTEngine:
         self.mapper = SemanticOutputMapper(
             self.scale,
             rain_mode=self.model.config.rain_mode,
+            temperature_mode=self.model.config.temperature_mode,
+            temperature_tendency_factor=self.model.config.temperature_tendency_factor,
         )
         torch.set_num_threads(threads)
         self.name = f"grast-primary-{self.manifest.code_commit[:7]}"

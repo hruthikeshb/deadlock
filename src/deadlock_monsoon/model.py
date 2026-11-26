@@ -23,6 +23,10 @@ class GRASTConfig:
     blocks: int = 4
     rain_mode: str = "softplus"
     rain_occurrence_prior: float = 0.1
+    # Absolute preserves schema-v2 bundles created before temperature-mode
+    # metadata existed. New training explicitly requests bounded_residual.
+    temperature_mode: str = "absolute"
+    temperature_tendency_factor: float = 0.05
 
 
 class ResidualBlock(nn.Module):
@@ -47,6 +51,10 @@ class GRAST(nn.Module):
             raise ValueError("unsupported rain mode")
         if not 0.0 < config.rain_occurrence_prior < 1.0:
             raise ValueError("rain occurrence prior must be between zero and one")
+        if config.temperature_mode not in {"absolute", "bounded_residual"}:
+            raise ValueError("unsupported temperature mode")
+        if config.temperature_tendency_factor <= 0:
+            raise ValueError("temperature tendency factor must be positive")
         self.config = config
         inputs = config.history * config.dynamic_channels + config.static_channels + 2
         self.encoder = nn.Conv2d(inputs, config.width, 3, padding=1, padding_mode="replicate")
@@ -55,6 +63,9 @@ class GRAST(nn.Module):
         self.fuse = nn.Conv2d(config.width * 2, config.width, 1)
         output_channels = config.dynamic_channels + int(config.rain_mode == "occurrence_intensity")
         self.head = nn.Conv2d(config.width, output_channels, 1)
+        if config.temperature_mode == "bounded_residual":
+            with torch.no_grad():
+                self.head.bias[0] = 0.0
         if config.rain_mode == "occurrence_intensity":
             prior_logit = math.log(config.rain_occurrence_prior / (1.0 - config.rain_occurrence_prior))
             with torch.no_grad():
@@ -86,14 +97,26 @@ class GRAST(nn.Module):
 class SemanticOutputMapper(nn.Module):
     """Convert raw model outputs to physical next states without hard clipping."""
 
-    def __init__(self, tendency_scale: torch.Tensor, rain_mode: str = "softplus"):
+    def __init__(
+        self,
+        tendency_scale: torch.Tensor,
+        rain_mode: str = "softplus",
+        temperature_mode: str = "bounded_residual",
+        temperature_tendency_factor: float = 0.05,
+    ):
         super().__init__()
         scale = torch.as_tensor(tendency_scale, dtype=torch.float32)
         if scale.shape != (6,) or torch.any(scale <= 0):
             raise ValueError("tendency_scale must contain six positive channel scales")
         if rain_mode not in {"softplus", "occurrence_intensity"}:
             raise ValueError("unsupported rain mode")
+        if temperature_mode not in {"absolute", "bounded_residual"}:
+            raise ValueError("unsupported temperature mode")
         self.rain_mode = rain_mode
+        self.temperature_mode = temperature_mode
+        if temperature_tendency_factor <= 0:
+            raise ValueError("temperature tendency factor must be positive")
+        self.temperature_tendency_factor = float(temperature_tendency_factor)
         self.register_buffer("tendency_scale", scale)
 
     def forward(self, raw: torch.Tensor, current_physical: torch.Tensor) -> torch.Tensor:
@@ -103,7 +126,15 @@ class SemanticOutputMapper(nn.Module):
         if current_physical.ndim != 4 or current_physical.shape[1:] != (6, 32, 36):
             raise ValueError("current tensor must have shape [batch,6,32,36]")
         channels = []
-        channels.append(233.15 + 100.0 * torch.sigmoid(raw[:, 0]))
+        if self.temperature_mode == "absolute":
+            temperature = 233.15 + 100.0 * torch.sigmoid(raw[:, 0])
+        else:
+            fraction = ((current_physical[:, 0] - 233.15) / 100.0).clamp(1e-6, 1 - 1e-6)
+            current_logit = torch.logit(fraction)
+            temperature = 233.15 + 100.0 * torch.sigmoid(
+                current_logit + self.temperature_tendency_factor * raw[:, 0]
+            )
+        channels.append(temperature)
         if self.rain_mode == "softplus":
             channels.append(F.softplus(raw[:, 1]))
             offset = 0

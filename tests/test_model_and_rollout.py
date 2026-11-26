@@ -39,6 +39,14 @@ def test_semantic_mapper_is_finite_nonnegative_and_temperature_bounded():
     assert torch.all((output[:, 0] >= 233.15) & (output[:, 0] <= 333.15))
 
 
+def test_bounded_residual_temperature_has_identity_at_zero_tendency():
+    mapper = SemanticOutputMapper(torch.ones(6), temperature_mode="bounded_residual")
+    current = physical_history(2)[:, -1]
+    raw = torch.zeros(2, 6, 32, 36)
+    output = mapper(raw, current)
+    assert torch.allclose(output[:, 0], current[:, 0], atol=1e-5)
+
+
 def test_occurrence_intensity_head_preserves_six_channel_physical_contract():
     model = GRAST(GRASTConfig(width=16, blocks=2, rain_mode="occurrence_intensity"))
     history = torch.randn(2, 3, 6, 32, 36)
