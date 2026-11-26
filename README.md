@@ -1,0 +1,45 @@
+# Deadlock — Multiverse of Monsoon
+
+Submission repository for a compact, physics-aware regional atmospheric forecaster. The current code is the P0 contract foundation: a deterministic persistence baseline behind the exact organizer API. It is intentionally simple and will remain runnable while learned candidates are developed.
+
+## Current state
+
+- Root `serve.py` implements `/health` and `/simulate`.
+- Inputs are copied and validated in physical units.
+- Perturbations are applied exactly once to the latest input day.
+- Every integer horizon from 1 through 14 is supported.
+- The baseline is deterministic, stateless, finite, and safe for repeated calls.
+- The verified training reader and baseline evaluator produce days 1/4/8/10 evidence.
+- A compact learned-only GRAST backbone and differentiable shared-weight rollout are unit-tested but not yet trained or served.
+- No dataset or organizer repository is committed here.
+
+## Local setup
+
+```bash
+python -m pip install -e ".[dev]"
+pytest
+python serve.py --port 8000
+```
+
+The official schema validator should be run against `http://localhost:8000` after installing the organizer kit separately. Training-only dependencies are available through `.[train]` and are not required by the judge-facing server.
+
+## Baseline evaluation
+
+Keep the official NetCDF outside this repository, then run:
+
+```bash
+python scripts/evaluate_baselines.py /path/to/india_climate_train.nc --partition validation --output reports/baselines/validation.json
+```
+
+The reader verifies the official SHA-256, full schema, coordinates, channel order, units, finiteness, and rain semantics before evaluation. Calendar climatology and model transforms fit the training partition only. The report covers persistence and climatology at days 1, 4, 8, and 10 with latitude-weighted RMSE, heavy-rain CSI/precision/recall/false alarms, and spatial-variance ratios.
+
+## Architecture progression
+
+1. Keep this persistence engine as the always-runnable contract baseline.
+2. Add leakage-free data windows and train-partition transforms.
+3. Add learned-only GRAST with shared autoregressive rollout and multi-step training.
+4. Time-box the bounded transport/residual gate against learned-only and additive controls.
+5. Export primary and independent fallback artifacts without runtime downloads.
+
+See [docs/WORKSTREAMS.md](docs/WORKSTREAMS.md) for ownership and gates.
+
