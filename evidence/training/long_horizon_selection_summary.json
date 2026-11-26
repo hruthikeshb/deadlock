@@ -1,0 +1,56 @@
+{
+  "status": "lead-weighted seed 17 selected; current served primary preserved",
+  "locked_test_opened": false,
+  "validation_seed": 20261126,
+  "validation_windows": 256,
+  "validation_rows_sha256": "ef4426ee02429a5fcaeb14e5c9aa8e3ed2ef057f754f45552daf7aca75f46a40",
+  "selected_bundle": "artifacts/selected_lead_weighted_seed17",
+  "selected_weights_sha256": "4c9250fc8696b28383de7bd38b6068738297687a36e3debf25cb402b78480d5d",
+  "before_uniform": {
+    "aggregate_normalized_rmse": 0.49426926684421846,
+    "normalized_rmse_by_lead": {"1": 0.3321306035183445, "4": 0.5192000361225838, "8": 0.5515228049344724, "10": 0.5742236228014729},
+    "official_skill_percent_by_lead": {"1": 5.26, "4": -9.32, "8": -21.98, "10": -26.91},
+    "rain_csi_by_lead": {"1": 0.4741111091128177, "4": 0.3215904284246782, "8": 0.3090032004111477, "10": 0.2925764192139738}
+  },
+  "after_lead_weighted": {
+    "aggregate_normalized_rmse": 0.48230371804367156,
+    "normalized_rmse_by_lead": {"1": 0.33216112571888445, "4": 0.5116567285647678, "8": 0.5322844089844457, "10": 0.5531126089065882},
+    "official_skill_percent_by_lead": {"1": 5.54, "4": -7.15, "8": -17.24, "10": -21.71},
+    "rain_csi_by_lead": {"1": 0.4622, "4": 0.3205, "8": 0.3218, "10": 0.3147},
+    "release_eligible": true,
+    "passes_anti_blur": true,
+    "passes_false_alarm": true
+  },
+  "official_shocks": {
+    "scenario_count": 8,
+    "all_nonzero": true,
+    "all_physical": true,
+    "all_stable": true,
+    "null_exact": true,
+    "minimum_day1_near_fraction": 0.995432705851238,
+    "maximum_response_std": 1.157506890657911
+  },
+  "rain_shock_investigation": {
+    "finding": "The two broad-suite failures are duplicate capped negative-rain shocks on an almost dry high-terrain patch, not official shock types.",
+    "input_amplitude_std": 0.011125147342681885,
+    "response_amplitude_std": 0.0006959313028812643,
+    "interpretation": "Finite but negligible response is physically reasonable; no artificial amplification applied."
+  },
+  "drift_diagnosis": {
+    "day10_uniform_bias": {"t2m_K": -0.022, "tp_mm_day": 0.579, "u10_m_s": 0.349, "v10_m_s": -0.210, "msl_Pa": -100.461, "tcwv_kg_m2": -4.076},
+    "day10_uniform_variance_ratio": {"t2m": 0.968, "tp": 0.387, "u10": 0.544, "v10": 0.437, "msl": 0.736, "tcwv": 0.646},
+    "day10_selected_bias": {"t2m_K": -0.262, "tp_mm_day": 0.864, "u10_m_s": -0.272, "v10_m_s": -0.120, "msl_Pa": -15.583, "tcwv_kg_m2": -3.457},
+    "day10_selected_variance_ratio": {"t2m": 0.975, "tp": 0.558, "u10": 0.698, "v10": 0.542, "msl": 0.661, "tcwv": 0.853},
+    "conclusion": "Climatology wins at long leads because autoregressive phase error combines with moisture/pressure drift and smoothing, especially for rain, winds, and tcwv."
+  },
+  "scheduled_continuation": {
+    "result": "rejected and early-stopped after two epochs",
+    "reason": "lost physical/release eligibility and rain false-alarm gate despite modest Day-8/10 NRMSE improvement"
+  },
+  "remaining_weaknesses": [
+    "RMSE remains worse than the better persistence/climatology reference at Days 4, 8, and 10.",
+    "Temperature RMSE slightly worsened at Days 8 and 10 under lead weighting.",
+    "Day-1 and Day-4 rain CSI slightly decreased, though both remain above the stronger baseline.",
+    "The selected bundle has not replaced the current served primary."
+  ]
+}

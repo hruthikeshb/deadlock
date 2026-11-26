@@ -192,6 +192,8 @@ def run(args: argparse.Namespace) -> dict:
         temperature_tendency_factor=args.temperature_tendency_factor,
     )
     model = GRAST(config)
+    if args.resume_checkpoint is not None:
+        model.load_state_dict(torch.load(args.resume_checkpoint, map_location="cpu", weights_only=True))
     mapper = SemanticOutputMapper(
         torch.from_numpy(transform.scale),
         rain_mode=args.rain_mode,
@@ -199,6 +201,11 @@ def run(args: argparse.Namespace) -> dict:
         temperature_tendency_factor=args.temperature_tendency_factor,
     )
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+    scheduler = (
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, args.epochs))
+        if args.learning_rate_schedule == "cosine"
+        else None
+    )
     mean = torch.from_numpy(transform.mean)
     scale = torch.from_numpy(transform.scale)
     horizons = (2, 4, 8, 10)
@@ -209,12 +216,13 @@ def run(args: argparse.Namespace) -> dict:
     if args.checkpoint.exists():
         args.checkpoint.unlink()  # prevent a rejected run from leaving a stale "best" artifact
     started = time.perf_counter()
+    epochs_without_improvement = 0
     for epoch in range(args.epochs):
         if args.resample_training_windows:
             train_data.rows = choose_rows(
                 available_train_rows, args.train_windows, args.seed + epoch * 10_007
             )
-        horizon = horizons[min(epoch, len(horizons) - 1)]
+        horizon = horizons[min(epoch + args.curriculum_offset, len(horizons) - 1)]
         model.train()
         losses = []
         occurrence_losses = []
@@ -259,6 +267,7 @@ def run(args: argparse.Namespace) -> dict:
             "train_loss": float(np.mean(losses)),
             "rain_occurrence_loss": float(np.mean(occurrence_losses)),
             "rain_tail_loss": float(np.mean(tail_losses)),
+            "learning_rate": float(optimizer.param_groups[0]["lr"]),
             "validation": validation,
         }
         records.append(record)
@@ -266,6 +275,16 @@ def run(args: argparse.Namespace) -> dict:
             best_score = selection
             best_epoch = epoch + 1
             torch.save(model.state_dict(), args.checkpoint)
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
+        if scheduler is not None:
+            scheduler.step()
+        if (
+            args.early_stopping_patience > 0
+            and epochs_without_improvement >= args.early_stopping_patience
+        ):
+            break
     return {
         "evidence_type": "chronological-candidate-prototype-not-release-candidate",
         "dataset_sha256": EXPECTED_DATASET_SHA256,
@@ -282,6 +301,9 @@ def run(args: argparse.Namespace) -> dict:
             for epoch in range(args.epochs)
         ])))) if args.resample_training_windows else int(args.train_windows),
         "lead_weights": args.lead_weights,
+        "learning_rate_schedule": args.learning_rate_schedule,
+        "resume_checkpoint": None if args.resume_checkpoint is None else str(args.resume_checkpoint),
+        "early_stopping_patience": args.early_stopping_patience,
         "geography_mode": args.geography_mode,
         "rain_loss": {
             "occurrence_weight": args.rain_occurrence_weight,
@@ -324,6 +346,12 @@ def main() -> None:
         default="softplus",
     )
     parser.add_argument("--learning-rate", type=float, default=1e-3)
+    parser.add_argument(
+        "--learning-rate-schedule", choices=("constant", "cosine"), default="constant"
+    )
+    parser.add_argument("--resume-checkpoint", type=Path)
+    parser.add_argument("--curriculum-offset", type=int, default=0)
+    parser.add_argument("--early-stopping-patience", type=int, default=0)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument(
         "--temperature-mode",
