@@ -14,7 +14,8 @@ requirements, architecture, acceptance gates, and experiment ledger are in
 - Every integer horizon from 1 through 14 is supported.
 - The baseline is deterministic, stateless, finite, and safe for repeated calls.
 - The verified training reader and baseline evaluator produce days 1/4/8/10 evidence.
-- The learned-only GRAST configuration passed the frozen validation gates for three scaled seeds; seed 17 is the provisional primary candidate and is not served yet.
+- The learned-only GRAST configuration passed the frozen validation gates for three scaled seeds; seed 17 is packaged and served as the provisional primary candidate.
+- Startup verifies model weights, bundled static geography, channel order, dataset provenance, and normalization metadata; a load failure falls back to persistence.
 - Retained reports and the seed-17 state dict are committed for team continuation; generated sweeps remain excluded.
 - No dataset or organizer repository is committed here.
 

@@ -7,7 +7,7 @@
     "msl",
     "tcwv"
   ],
-  "code_commit": "0d67b0ad8b829447ec16086cc4d6e28bb76205bf",
+  "code_commit": "2d610642467d7c7a9034fd4b1688fd3ff5adb1cf",
   "dataset_sha256": "f37bdbd0bd44e6fe951adf36c9a08620075f9d17de391b04c97d61f06797903b",
   "model_class": "GRAST",
   "model_config": {
@@ -36,12 +36,13 @@
     20.40909767150879
   ],
   "role": "primary",
-  "schema_version": 1,
+  "schema_version": 2,
   "split": {
     "test_end": "2021-12-31",
     "train_end": "2017-12-31",
     "validation_end": "2019-12-31"
   },
+  "static_sha256": "afafa17c0998244a2c371d0b3c662bdf28676404f8f61b0a1810252f2be1e539",
   "training": {
     "best_epoch": 4,
     "evidence_report": "scaled_seed17.json",
