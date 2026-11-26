@@ -6,6 +6,7 @@ Outputs are local/ignored until the model passes the PRD release gates.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import random
 import sys
@@ -21,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from deadlock_monsoon.data import ChannelTransform, SplitSpec, chronological_masks, window_indices
+from deadlock_monsoon.baselines import CalendarDayClimatology
 from deadlock_monsoon.dataset import EXPECTED_DATASET_SHA256, load_verified_dataset
 from deadlock_monsoon.metrics import critical_success_index, latitude_weighted_rmse, spatial_variance_ratio
 from deadlock_monsoon.model import GRAST, GRASTConfig, SemanticOutputMapper, parameter_count
@@ -39,7 +41,11 @@ def choose_rows(rows: np.ndarray, count: int, seed: int) -> np.ndarray:
     return rows[np.sort(indices)]
 
 
-def evaluate(model, mapper, loader, mean, scale) -> tuple[dict, object]:
+def rows_sha256(rows: np.ndarray) -> str:
+    return hashlib.sha256(np.asarray(rows, dtype=np.int64).tobytes()).hexdigest()
+
+
+def evaluate(model, mapper, loader, mean, scale, climatology) -> tuple[dict, object]:
     predictions = []
     targets = []
     persistences = []
@@ -65,6 +71,7 @@ def evaluate(model, mapper, loader, mean, scale) -> tuple[dict, object]:
     prediction = np.concatenate(predictions)
     target = np.concatenate(targets)
     persistence = np.concatenate(persistences)
+    climatology_prediction = np.asarray(climatology, dtype=np.float32)
     occurrence_probability = (
         np.concatenate(occurrence_probabilities) if has_occurrence_head else None
     )
@@ -86,12 +93,19 @@ def evaluate(model, mapper, loader, mean, scale) -> tuple[dict, object]:
         persist = persistence
         model_rmse = latitude_weighted_rmse(pred, truth)
         persistence_rmse = latitude_weighted_rmse(persist, truth)
+        climatology_rmse = latitude_weighted_rmse(
+            climatology_prediction[:, lead - 1], truth
+        )
         rmse[lead] = model_rmse
         report["leads"][str(lead)] = {
             "model_rmse": model_rmse.tolist(),
             "persistence_rmse": persistence_rmse.tolist(),
+            "climatology_rmse": climatology_rmse.tolist(),
             "rain": critical_success_index(pred[:, 1], truth[:, 1]),
             "persistence_rain": critical_success_index(persist[:, 1], truth[:, 1]),
+            "climatology_rain": critical_success_index(
+                climatology_prediction[:, lead - 1, 1], truth[:, 1]
+            ),
             "variance_ratio": spatial_variance_ratio(pred, truth).tolist(),
         }
         if has_occurrence_head:
@@ -145,15 +159,23 @@ def run(args: argparse.Namespace) -> dict:
     split = SplitSpec()
     masks = chronological_masks(climate.time, split)
     transform = ChannelTransform.fit(climate.data, masks["train"])
-    train_rows = choose_rows(window_indices(masks["train"], 3, 10), args.train_windows, args.seed)
+    available_train_rows = window_indices(masks["train"], 3, 10)
+    train_rows = choose_rows(available_train_rows, args.train_windows, args.seed)
     validation_rows = choose_rows(
-        window_indices(masks["validation"], 3, 10), args.validation_windows, args.seed + 1
+        window_indices(masks["validation"], 3, 10),
+        args.validation_windows,
+        args.validation_seed,
     )
     train_data = ForecastWindowDataset(
         climate, train_rows, transform, horizon=10, geography_mode=args.geography_mode
     )
     validation_data = ForecastWindowDataset(
         climate, validation_rows, transform, horizon=10, geography_mode=args.geography_mode
+    )
+    climatology_model = CalendarDayClimatology.fit(climate.data, climate.time, masks["train"])
+    validation_target_times = climate.time[validation_rows[:, 3:]]
+    validation_climatology = climatology_model.predict(validation_target_times.reshape(-1)).reshape(
+        args.validation_windows, 10, *climate.data.shape[1:]
     )
     train_rain_occurrence_prior = float((climate.data[masks["train"], 1] > 10.0).mean())
     train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
@@ -188,6 +210,10 @@ def run(args: argparse.Namespace) -> dict:
         args.checkpoint.unlink()  # prevent a rejected run from leaving a stale "best" artifact
     started = time.perf_counter()
     for epoch in range(args.epochs):
+        if args.resample_training_windows:
+            train_data.rows = choose_rows(
+                available_train_rows, args.train_windows, args.seed + epoch * 10_007
+            )
         horizon = horizons[min(epoch, len(horizons) - 1)]
         model.train()
         losses = []
@@ -224,7 +250,9 @@ def run(args: argparse.Namespace) -> dict:
             losses.append(float(breakdown.total.detach()))
             occurrence_losses.append(float(breakdown.rain_occurrence.detach()))
             tail_losses.append(float(breakdown.rain_tail.detach()))
-        validation, selection = evaluate(model, mapper, validation_loader, mean, scale)
+        validation, selection = evaluate(
+            model, mapper, validation_loader, mean, scale, validation_climatology
+        )
         record = {
             "epoch": epoch + 1,
             "trained_horizon": horizon,
@@ -246,6 +274,13 @@ def run(args: argparse.Namespace) -> dict:
         "parameters": parameter_count(model),
         "train_windows": args.train_windows,
         "validation_windows": args.validation_windows,
+        "validation_seed": args.validation_seed,
+        "validation_rows_sha256": rows_sha256(validation_rows),
+        "resample_training_windows": args.resample_training_windows,
+        "unique_training_windows_seen": int(len(np.unique(np.concatenate([
+            choose_rows(available_train_rows, args.train_windows, args.seed + epoch * 10_007)[:, 0]
+            for epoch in range(args.epochs)
+        ])))) if args.resample_training_windows else int(args.train_windows),
         "lead_weights": args.lead_weights,
         "geography_mode": args.geography_mode,
         "rain_loss": {
@@ -270,6 +305,13 @@ def main() -> None:
     parser.add_argument("--checkpoint", type=Path, default=Path("artifacts/checkpoints/candidate.pt"))
     parser.add_argument("--train-windows", type=int, default=256)
     parser.add_argument("--validation-windows", type=int, default=64)
+    parser.add_argument("--validation-seed", type=int, default=20261126)
+    parser.add_argument(
+        "--resample-training-windows",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Draw a deterministic fresh training subset each epoch without adding optimizer steps",
+    )
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--validation-batch-size", type=int, default=8)
     parser.add_argument("--epochs", type=int, default=4)

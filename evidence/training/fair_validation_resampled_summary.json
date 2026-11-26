@@ -1,0 +1,49 @@
+{
+  "status": "selected challenger retained locally; packaged fallback unchanged",
+  "validation_partition": "2018-01-01 through 2019-12-31",
+  "locked_test_opened": false,
+  "validation_seed": 20261126,
+  "validation_windows": 256,
+  "validation_rows_sha256": "ef4426ee02429a5fcaeb14e5c9aa8e3ed2ef057f754f45552daf7aca75f46a40",
+  "training_windows_per_epoch": 1024,
+  "resampled_each_epoch": true,
+  "rollout_curriculum": [2, 4, 8, 10, 10, 10, 10, 10],
+  "seeds": {
+    "7": {
+      "best_epoch": 5,
+      "unique_training_windows_seen": 4076,
+      "aggregate_normalized_rmse": 0.5082792515344066,
+      "normalized_rmse_by_lead": {"1": 0.3355846143330694, "4": 0.534712495769117, "8": 0.5683216205071195, "10": 0.5944982755283202},
+      "rain_csi_by_lead": {"1": 0.4618204135908758, "4": 0.3081399237509197, "8": 0.30055845364618283, "10": 0.2921507256708139},
+      "perturbation_all_nonzero": true
+    },
+    "17": {
+      "best_epoch": 6,
+      "unique_training_windows_seen": 4078,
+      "aggregate_normalized_rmse": 0.49426926684421846,
+      "normalized_rmse_by_lead": {"1": 0.3321306035183445, "4": 0.5192000361225838, "8": 0.5515228049344724, "10": 0.5742236228014729},
+      "rain_csi_by_lead": {"1": 0.4741111091128177, "4": 0.3215904284246782, "8": 0.3090032004111477, "10": 0.2925764192139738},
+      "perturbation_all_nonzero": false
+    },
+    "29": {
+      "best_epoch": 4,
+      "unique_training_windows_seen": 4035,
+      "aggregate_normalized_rmse": 0.5028672768255577,
+      "normalized_rmse_by_lead": {"1": 0.3329109266128125, "4": 0.5313107952627298, "8": 0.560936319963303, "10": 0.5863110654633853},
+      "rain_csi_by_lead": {"1": 0.4691826551409094, "4": 0.3086745426222611, "8": 0.3017548294676526, "10": 0.2910519698239732},
+      "perturbation_all_nonzero": false
+    }
+  },
+  "selection": {
+    "seed": 7,
+    "reason": "Only finalist passing every 370-scenario perturbation gate while also passing Day-4 persistence, physical, rain, false-alarm, and anti-blur gates.",
+    "not_promoted": true
+  },
+  "climatology_finding": "All candidates beat climatology at Day 1 but not at Days 4, 8, or 10 on the common validation set.",
+  "remaining_weaknesses": [
+    "Long-horizon model error remains worse than calendar-day climatology.",
+    "The lowest-RMSE seed 17 has two effectively zero responses to negative precipitation shocks on a dry high-terrain state.",
+    "Selected seed 7 has weaker aggregate RMSE and rain CSI than seed 17.",
+    "The packaged fallback remains unchanged pending final qualification."
+  ]
+}
