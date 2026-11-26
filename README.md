@@ -2,6 +2,10 @@
 
 Submission repository for a compact, physics-aware regional atmospheric forecaster. The current code is the P0 contract foundation: a deterministic persistence baseline behind the exact organizer API. It is intentionally simple and will remain runnable while learned candidates are developed.
 
+Team continuation starts with [`docs/HANDOFF.md`](docs/HANDOFF.md). The complete
+requirements, architecture, acceptance gates, and experiment ledger are in
+[`docs/PRODUCT_REQUIREMENTS.md`](docs/PRODUCT_REQUIREMENTS.md).
+
 ## Current state
 
 - Root `serve.py` implements `/health` and `/simulate`.
@@ -10,7 +14,8 @@ Submission repository for a compact, physics-aware regional atmospheric forecast
 - Every integer horizon from 1 through 14 is supported.
 - The baseline is deterministic, stateless, finite, and safe for repeated calls.
 - The verified training reader and baseline evaluator produce days 1/4/8/10 evidence.
-- A compact learned-only GRAST backbone and differentiable shared-weight rollout are unit-tested but not yet trained or served.
+- The learned-only GRAST configuration passed the frozen validation gates for three scaled seeds; seed 17 is the provisional primary candidate and is not served yet.
+- Retained reports and the seed-17 state dict are committed for team continuation; generated sweeps remain excluded.
 - No dataset or organizer repository is committed here.
 
 ## Local setup
@@ -51,5 +56,7 @@ Chronological candidate training is available through `scripts/train_candidate.p
 4. Time-box the bounded transport/residual gate against learned-only and additive controls.
 5. Export primary and independent fallback artifacts without runtime downloads.
 
-Detailed planning documents and generated experiment evidence are maintained outside the submission repository. This repository keeps only executable source, essential tests, configuration, required artifacts, attribution, and operating instructions.
+The repository contains the authoritative PRD, retained three-seed evidence,
+and the provisional candidate state dict. The organizer dataset, failed sweep
+artifacts, and redundant checkpoints remain excluded.
 
