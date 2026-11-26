@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -17,7 +18,19 @@ from deadlock_monsoon.contract import ContractError
 from deadlock_monsoon.engine import PersistenceEngine
 from deadlock_monsoon.service import run_request
 
-ENGINE = PersistenceEngine()
+
+def load_engine():
+    bundle = Path(os.environ.get("DEADLOCK_MODEL_BUNDLE", ROOT / "artifacts" / "primary"))
+    try:
+        from deadlock_monsoon.learned_engine import GRASTEngine
+
+        return GRASTEngine(bundle)
+    except Exception as exc:
+        print(f"learned model unavailable; using persistence fallback: {exc}", file=sys.stderr)
+        return PersistenceEngine()
+
+
+ENGINE = load_engine()
 app = FastAPI(title="Deadlock Monsoon", docs_url=None, redoc_url=None)
 
 

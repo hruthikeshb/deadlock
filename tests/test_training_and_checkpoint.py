@@ -62,6 +62,7 @@ def test_bundle_round_trip_and_hash_guard(tmp_path):
         split={"train_end": "2017-12-31", "validation_end": "2019-12-31"},
         training={"horizon": 10, "lead_weights": "uniform", "seed": 7},
         code_commit="test",
+        static_features=np.zeros((2, 32, 36), dtype=np.float32),
     )
     restored, manifest = load_grast_bundle(tmp_path, expected_role="fallback")
     assert manifest.training["horizon"] == 10

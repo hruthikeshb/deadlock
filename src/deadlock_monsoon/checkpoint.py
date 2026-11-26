@@ -15,7 +15,7 @@ from .contract import CHANNELS
 from .dataset import EXPECTED_DATASET_SHA256
 from .model import GRAST, GRASTConfig
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -32,6 +32,7 @@ class ArtifactManifest:
     training: dict[str, Any]
     code_commit: str
     weights_sha256: str
+    static_sha256: str
 
 
 def _sha256(path: Path) -> str:
@@ -47,6 +48,7 @@ def export_grast_bundle(
     split: dict[str, str],
     training: dict[str, Any],
     code_commit: str,
+    static_features: np.ndarray,
 ) -> ArtifactManifest:
     if role not in {"primary", "fallback"}:
         raise ValueError("role must be primary or fallback")
@@ -57,7 +59,12 @@ def export_grast_bundle(
     target = Path(directory)
     target.mkdir(parents=True, exist_ok=True)
     weights_path = target / "weights.pt"
+    static_path = target / "static.npy"
+    static = np.asarray(static_features, dtype=np.float32)
+    if static.shape != (model.config.static_channels, 32, 36) or not np.isfinite(static).all():
+        raise ValueError("static features do not match model configuration")
     torch.save(model.state_dict(), weights_path)
+    np.save(static_path, static, allow_pickle=False)
     manifest = ArtifactManifest(
         schema_version=SCHEMA_VERSION,
         role=role,
@@ -71,6 +78,7 @@ def export_grast_bundle(
         training=dict(training),
         code_commit=code_commit,
         weights_sha256=_sha256(weights_path),
+        static_sha256=_sha256(static_path),
     )
     (target / "manifest.json").write_text(
         json.dumps(asdict(manifest), indent=2, sort_keys=True) + "\n",
@@ -92,11 +100,17 @@ def load_grast_bundle(directory: str | Path, expected_role: str | None = None):
     if manifest.dataset_sha256 != EXPECTED_DATASET_SHA256:
         raise ValueError("artifact dataset provenance mismatch")
     weights_path = source / "weights.pt"
+    static_path = source / "static.npy"
     if _sha256(weights_path) != manifest.weights_sha256:
         raise ValueError("artifact weights hash mismatch")
+    if _sha256(static_path) != manifest.static_sha256:
+        raise ValueError("artifact static-feature hash mismatch")
     model = GRAST(GRASTConfig(**manifest.model_config))
     state = torch.load(weights_path, map_location="cpu", weights_only=True)
     model.load_state_dict(state, strict=True)
     model.eval()
+    static = np.load(static_path, allow_pickle=False)
+    if static.shape != (model.config.static_channels, 32, 36) or not np.isfinite(static).all():
+        raise ValueError("artifact static features are invalid")
     return model, manifest
 

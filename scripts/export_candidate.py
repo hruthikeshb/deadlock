@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from deadlock_monsoon.checkpoint import export_grast_bundle, load_grast_bundle
 from deadlock_monsoon.data import ChannelTransform, SplitSpec, chronological_masks
 from deadlock_monsoon.dataset import load_verified_dataset
+from deadlock_monsoon.geography import geography_features
 from deadlock_monsoon.model import GRAST, GRASTConfig
 
 
@@ -69,6 +70,12 @@ def main() -> None:
             "evidence_report": args.report.name,
         },
         code_commit=current_commit(),
+        static_features=geography_features(
+            climate.static,
+            climate.lat,
+            climate.lon,
+            mode=report["geography_mode"],
+        ),
     )
     restored, restored_manifest = load_grast_bundle(args.output, expected_role=args.role)
     for expected, actual in zip(model.parameters(), restored.parameters()):
