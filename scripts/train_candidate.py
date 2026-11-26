@@ -76,6 +76,7 @@ def evaluate(model, mapper, loader, mean, scale) -> tuple[dict, object]:
             "model_rmse": model_rmse.tolist(),
             "persistence_rmse": persistence_rmse.tolist(),
             "rain": critical_success_index(pred[:, 1], truth[:, 1]),
+            "persistence_rain": critical_success_index(persist[:, 1], truth[:, 1]),
             "variance_ratio": spatial_variance_ratio(pred, truth).tolist(),
         }
     day8_ratios = np.asarray(report["leads"]["8"]["variance_ratio"])
@@ -83,6 +84,19 @@ def evaluate(model, mapper, loader, mean, scale) -> tuple[dict, object]:
                             and np.all(day8_ratios <= 2.50))
     rain_scores = [report["leads"][str(lead)]["rain"]["csi"] for lead in (1, 4, 8)]
     passes_rain_activity = bool(all(np.isfinite(score) and score > 0 for score in rain_scores))
+    false_alarm_pairs = [
+        (
+            report["leads"][str(lead)]["rain"]["false_alarm_ratio"],
+            report["leads"][str(lead)]["persistence_rain"]["false_alarm_ratio"],
+        )
+        for lead in (1, 4, 8)
+    ]
+    passes_false_alarm = bool(all(
+        np.isfinite(model_far)
+        and np.isfinite(reference_far)
+        and model_far <= min(0.75, reference_far + 0.10)
+        for model_far, reference_far in false_alarm_pairs
+    ))
     selection = score_checkpoint(
         rmse,
         scale.numpy(),
@@ -90,6 +104,7 @@ def evaluate(model, mapper, loader, mean, scale) -> tuple[dict, object]:
         physical,
         passes_anti_blur=passes_anti_blur,
         passes_rain_activity=passes_rain_activity,
+        passes_false_alarm=passes_false_alarm,
     )
     report["selection"] = asdict(selection)
     return report, selection
@@ -114,9 +129,9 @@ def run(args: argparse.Namespace) -> dict:
     validation_loader = DataLoader(
         validation_data, batch_size=args.validation_batch_size, shuffle=False, num_workers=0
     )
-    config = GRASTConfig(width=args.width, blocks=args.blocks)
+    config = GRASTConfig(width=args.width, blocks=args.blocks, rain_mode=args.rain_mode)
     model = GRAST(config)
-    mapper = SemanticOutputMapper(torch.from_numpy(transform.scale))
+    mapper = SemanticOutputMapper(torch.from_numpy(transform.scale), rain_mode=args.rain_mode)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
     mean = torch.from_numpy(transform.mean)
     scale = torch.from_numpy(transform.scale)
@@ -138,14 +153,25 @@ def run(args: argparse.Namespace) -> dict:
         rain_loss = RainLossConfig(
             occurrence_weight=args.rain_occurrence_weight,
             tail_weight=args.rain_tail_weight,
+            max_positive_class_weight=args.rain_positive_class_cap,
         )
         for batch in train_loader:
-            prediction = autoregressive_rollout(
+            prediction, raw_outputs = autoregressive_rollout(
                 model, mapper, batch["history"], batch["static"], batch["doy_sincos"],
-                horizon, mean, scale,
+                horizon, mean, scale, return_raw=True,
+            )
+            occurrence_logits = (
+                raw_outputs[:, :, 1]
+                if args.rain_mode == "occurrence_intensity"
+                else None
             )
             breakdown = rollout_huber_loss(
-                prediction, batch["target"][:, :horizon], scale, weights, rain=rain_loss
+                prediction,
+                batch["target"][:, :horizon],
+                scale,
+                weights,
+                rain=rain_loss,
+                rain_occurrence_logits=occurrence_logits,
             )
             optimizer.zero_grad(set_to_none=True)
             breakdown.total.backward()
@@ -180,6 +206,7 @@ def run(args: argparse.Namespace) -> dict:
         "rain_loss": {
             "occurrence_weight": args.rain_occurrence_weight,
             "tail_weight": args.rain_tail_weight,
+            "positive_class_cap": args.rain_positive_class_cap,
             "threshold_mm": 10.0,
         },
         "best_epoch": best_epoch,
@@ -202,11 +229,17 @@ def main() -> None:
     parser.add_argument("--epochs", type=int, default=4)
     parser.add_argument("--width", type=int, default=16)
     parser.add_argument("--blocks", type=int, default=2)
+    parser.add_argument(
+        "--rain-mode",
+        choices=("softplus", "occurrence_intensity"),
+        default="softplus",
+    )
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--lead-weights", choices=("uniform", "mild_increase"), default="uniform")
     parser.add_argument("--rain-occurrence-weight", type=float, default=0.0)
     parser.add_argument("--rain-tail-weight", type=float, default=0.0)
+    parser.add_argument("--rain-positive-class-cap", type=float, default=20.0)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--threads", type=int, default=4)
     args = parser.parse_args()

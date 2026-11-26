@@ -53,6 +53,7 @@ def rollout_huber_loss(
     lead_weights: torch.Tensor | None = None,
     beta: float = 1.0,
     rain: RainLossConfig | None = None,
+    rain_occurrence_logits: torch.Tensor | None = None,
 ) -> LossBreakdown:
     """Channel-balanced physical error over every trained autoregressive lead."""
     if prediction_physical.shape != target_physical.shape:
@@ -105,9 +106,18 @@ def rollout_huber_loss(
         min=1.0,
         max=rain_config.max_positive_class_weight,
     )
-    occurrence_logits = (
-        predicted_rain - rain_config.threshold_mm
-    ) / rain_config.occurrence_temperature_mm
+    if rain_occurrence_logits is None:
+        occurrence_logits = (
+            predicted_rain - rain_config.threshold_mm
+        ) / rain_config.occurrence_temperature_mm
+    else:
+        occurrence_logits = torch.as_tensor(
+            rain_occurrence_logits,
+            dtype=prediction_physical.dtype,
+            device=prediction_physical.device,
+        )
+        if occurrence_logits.shape != target_rain.shape:
+            raise ValueError("rain occurrence logits must have shape [batch,lead,lat,lon]")
     occurrence_loss = F.binary_cross_entropy_with_logits(
         occurrence_logits,
         event,

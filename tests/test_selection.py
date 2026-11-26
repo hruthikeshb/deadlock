@@ -45,3 +45,17 @@ def test_scientifically_valid_candidate_still_needs_day4_persistence_gate():
     assert not score.release_eligible
     assert not is_better(score, None)
 
+
+def test_false_alarm_surge_blocks_retention():
+    rmse = {lead: np.full(6, 0.1) for lead in (1, 4, 8, 10)}
+    score = score_checkpoint(
+        rmse,
+        np.ones(6),
+        np.ones(6),
+        valid=True,
+        passes_false_alarm=False,
+    )
+    assert not score.valid
+    assert not score.passes_false_alarm
+    assert not score.release_eligible
+

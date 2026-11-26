@@ -30,7 +30,8 @@ def autoregressive_rollout(
     normalization_mean: torch.Tensor,
     normalization_scale: torch.Tensor,
     perturbation: torch.Tensor | None = None,
-) -> torch.Tensor:
+    return_raw: bool = False,
+) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
     if init_states.ndim != 5 or init_states.shape[1:] != (3, 6, 32, 36):
         raise ValueError("init_states must have shape [batch,3,6,32,36]")
     if not 1 <= steps <= 14:
@@ -46,14 +47,19 @@ def autoregressive_rollout(
         raise ValueError("normalization scales must be positive")
     pair = doy_sincos
     outputs = []
+    raw_outputs = []
     for _ in range(steps):
         history_normalized = (history - mean) / scale
         raw = model(history_normalized, static_features, pair)
+        raw_outputs.append(raw)
         next_state = mapper(raw, history[:, -1])
         if not torch.isfinite(next_state).all():
             raise RuntimeError("model produced nonfinite next state")
         outputs.append(next_state)
         history = torch.cat((history[:, 1:], next_state[:, None]), dim=1)
         pair = advance_doy(pair)
-    return torch.stack(outputs, dim=1)
+    rollout = torch.stack(outputs, dim=1)
+    if return_raw:
+        return rollout, torch.stack(raw_outputs, dim=1)
+    return rollout
 

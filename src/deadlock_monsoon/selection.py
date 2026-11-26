@@ -17,6 +17,7 @@ class CheckpointScore:
     valid: bool
     passes_anti_blur: bool
     passes_rain_activity: bool
+    passes_false_alarm: bool
     beats_persistence_day4: bool
     release_eligible: bool
 
@@ -28,6 +29,7 @@ def score_checkpoint(
     valid: bool,
     passes_anti_blur: bool = True,
     passes_rain_activity: bool = True,
+    passes_false_alarm: bool = True,
 ) -> CheckpointScore:
     required = (1, 4, 8, 10)
     if tuple(sorted(rmse_by_lead)) != required:
@@ -45,7 +47,7 @@ def score_checkpoint(
         else:
             normalized[lead] = float(np.mean(value / scale))
     day4 = np.asarray(rmse_by_lead[4], dtype=np.float64)
-    eligible = bool(valid and passes_anti_blur and passes_rain_activity)
+    eligible = bool(valid and passes_anti_blur and passes_rain_activity and passes_false_alarm)
     beats_persistence = bool(eligible and np.mean(day4 / scale) < np.mean(reference / scale))
     aggregate = float(np.mean([normalized[lead] for lead in required])) if eligible else float("inf")
     return CheckpointScore(
@@ -57,6 +59,7 @@ def score_checkpoint(
         valid=eligible,
         passes_anti_blur=bool(passes_anti_blur),
         passes_rain_activity=bool(passes_rain_activity),
+        passes_false_alarm=bool(passes_false_alarm),
         beats_persistence_day4=beats_persistence,
         release_eligible=bool(eligible and beats_persistence),
     )

@@ -20,6 +20,7 @@ class GRASTConfig:
     static_channels: int = 2
     width: int = 48
     blocks: int = 4
+    rain_mode: str = "softplus"
 
 
 class ResidualBlock(nn.Module):
@@ -40,13 +41,16 @@ class GRAST(nn.Module):
 
     def __init__(self, config: GRASTConfig = GRASTConfig()):
         super().__init__()
+        if config.rain_mode not in {"softplus", "occurrence_intensity"}:
+            raise ValueError("unsupported rain mode")
         self.config = config
         inputs = config.history * config.dynamic_channels + config.static_channels + 2
         self.encoder = nn.Conv2d(inputs, config.width, 3, padding=1, padding_mode="replicate")
         self.native = nn.Sequential(*[ResidualBlock(config.width) for _ in range(config.blocks)])
         self.coarse = nn.Sequential(ResidualBlock(config.width), ResidualBlock(config.width))
         self.fuse = nn.Conv2d(config.width * 2, config.width, 1)
-        self.head = nn.Conv2d(config.width, config.dynamic_channels, 1)
+        output_channels = config.dynamic_channels + int(config.rain_mode == "occurrence_intensity")
+        self.head = nn.Conv2d(config.width, output_channels, 1)
 
     def forward(
         self,
@@ -74,23 +78,36 @@ class GRAST(nn.Module):
 class SemanticOutputMapper(nn.Module):
     """Convert raw model outputs to physical next states without hard clipping."""
 
-    def __init__(self, tendency_scale: torch.Tensor):
+    def __init__(self, tendency_scale: torch.Tensor, rain_mode: str = "softplus"):
         super().__init__()
         scale = torch.as_tensor(tendency_scale, dtype=torch.float32)
         if scale.shape != (6,) or torch.any(scale <= 0):
             raise ValueError("tendency_scale must contain six positive channel scales")
+        if rain_mode not in {"softplus", "occurrence_intensity"}:
+            raise ValueError("unsupported rain mode")
+        self.rain_mode = rain_mode
         self.register_buffer("tendency_scale", scale)
 
     def forward(self, raw: torch.Tensor, current_physical: torch.Tensor) -> torch.Tensor:
-        if raw.shape != current_physical.shape or raw.shape[1:] != (6, 32, 36):
-            raise ValueError("raw/current tensors must have shape [batch,6,32,36]")
+        expected_raw_channels = 7 if self.rain_mode == "occurrence_intensity" else 6
+        if raw.ndim != 4 or raw.shape[1:] != (expected_raw_channels, 32, 36):
+            raise ValueError("raw tensor has the wrong semantic-head shape")
+        if current_physical.ndim != 4 or current_physical.shape[1:] != (6, 32, 36):
+            raise ValueError("current tensor must have shape [batch,6,32,36]")
         channels = []
         channels.append(233.15 + 100.0 * torch.sigmoid(raw[:, 0]))
-        channels.append(F.softplus(raw[:, 1]))
+        if self.rain_mode == "softplus":
+            channels.append(F.softplus(raw[:, 1]))
+            offset = 0
+        else:
+            occurrence_probability = torch.sigmoid(raw[:, 1])
+            intensity = F.softplus(raw[:, 2])
+            channels.append(occurrence_probability * intensity)
+            offset = 1
         for channel in range(2, 6):
             channels.append(
                 current_physical[:, channel]
-                + raw[:, channel] * self.tendency_scale[channel]
+                + raw[:, channel + offset] * self.tendency_scale[channel]
             )
         return torch.stack(channels, dim=1)
 

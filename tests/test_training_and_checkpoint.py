@@ -102,3 +102,19 @@ def test_rain_objective_remains_finite_without_events():
     assert torch.isfinite(result.total)
     assert result.rain_tail == 0
 
+
+def test_direct_occurrence_logits_receive_gradients():
+    prediction = torch.zeros(1, 2, 6, 32, 36, requires_grad=True)
+    target = torch.zeros_like(prediction)
+    target[:, :, 1, 2:5, 2:5] = 20.0
+    logits = torch.zeros(1, 2, 32, 36, requires_grad=True)
+    result = rollout_huber_loss(
+        prediction,
+        target,
+        torch.ones(6),
+        rain=RainLossConfig(occurrence_weight=0.2, tail_weight=0.2),
+        rain_occurrence_logits=logits,
+    )
+    result.total.backward()
+    assert logits.grad is not None and torch.isfinite(logits.grad).all()
+
