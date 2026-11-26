@@ -123,13 +123,22 @@ def run(args: argparse.Namespace) -> dict:
     validation_rows = choose_rows(
         window_indices(masks["validation"], 3, 10), args.validation_windows, args.seed + 1
     )
-    train_data = ForecastWindowDataset(climate, train_rows, transform, horizon=10)
-    validation_data = ForecastWindowDataset(climate, validation_rows, transform, horizon=10)
+    train_data = ForecastWindowDataset(
+        climate, train_rows, transform, horizon=10, geography_mode=args.geography_mode
+    )
+    validation_data = ForecastWindowDataset(
+        climate, validation_rows, transform, horizon=10, geography_mode=args.geography_mode
+    )
     train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
     validation_loader = DataLoader(
         validation_data, batch_size=args.validation_batch_size, shuffle=False, num_workers=0
     )
-    config = GRASTConfig(width=args.width, blocks=args.blocks, rain_mode=args.rain_mode)
+    config = GRASTConfig(
+        width=args.width,
+        blocks=args.blocks,
+        rain_mode=args.rain_mode,
+        static_channels=train_data.static.shape[0],
+    )
     model = GRAST(config)
     mapper = SemanticOutputMapper(torch.from_numpy(transform.scale), rain_mode=args.rain_mode)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
@@ -203,6 +212,7 @@ def run(args: argparse.Namespace) -> dict:
         "train_windows": args.train_windows,
         "validation_windows": args.validation_windows,
         "lead_weights": args.lead_weights,
+        "geography_mode": args.geography_mode,
         "rain_loss": {
             "occurrence_weight": args.rain_occurrence_weight,
             "tail_weight": args.rain_tail_weight,
@@ -229,6 +239,7 @@ def main() -> None:
     parser.add_argument("--epochs", type=int, default=4)
     parser.add_argument("--width", type=int, default=16)
     parser.add_argument("--blocks", type=int, default=2)
+    parser.add_argument("--geography-mode", choices=("static", "metric"), default="static")
     parser.add_argument(
         "--rain-mode",
         choices=("softplus", "occurrence_intensity"),

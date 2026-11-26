@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 
 from .data import ChannelTransform
 from .dataset import ClimateDataset
+from .geography import geography_features
 
 
 def doy_sincos(date: np.datetime64) -> np.ndarray:
@@ -21,15 +22,10 @@ def doy_sincos(date: np.datetime64) -> np.ndarray:
 
 
 def normalized_static(static: np.ndarray) -> np.ndarray:
-    value = np.asarray(static, dtype=np.float32).copy()
-    if value.shape != (2, 32, 36):
-        raise ValueError("static fields must have shape [2,32,36]")
-    orography = value[1]
-    scale = float(orography.std())
-    if scale <= 0 or not np.isfinite(scale):
-        raise ValueError("orography has invalid scale")
-    value[1] = (orography - float(orography.mean())) / scale
-    return value
+    # Backward-compatible static-only control used by existing tests and prototypes.
+    lat = np.arange(6.5, 37.5 + 1e-9, 1.0)
+    lon = np.arange(65.5, 100.5 + 1e-9, 1.0)
+    return geography_features(static, lat, lon, mode="static")
 
 
 class ForecastWindowDataset(Dataset):
@@ -42,6 +38,7 @@ class ForecastWindowDataset(Dataset):
         transform: ChannelTransform,
         history: int = 3,
         horizon: int = 2,
+        geography_mode: str = "static",
     ):
         rows = np.asarray(window_rows, dtype=np.int64)
         if rows.ndim != 2 or rows.shape[1] != history + horizon:
@@ -53,7 +50,9 @@ class ForecastWindowDataset(Dataset):
         self.transform = transform
         self.history = history
         self.horizon = horizon
-        self.static = torch.from_numpy(normalized_static(climate.static))
+        self.static = torch.from_numpy(
+            geography_features(climate.static, climate.lat, climate.lon, mode=geography_mode)
+        )
 
     def __len__(self) -> int:
         return self.rows.shape[0]
