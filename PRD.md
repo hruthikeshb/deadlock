@@ -265,11 +265,14 @@ The repository uses a thin-root, package-first architecture. Judge-facing servin
 | Shared multi-step recursion | `src/deadlock_monsoon/torch_rollout.py` | Implemented as differentiable seam; same weights, perturb once, history shift, seasonal advance |
 | Rollout-aware objective | `src/deadlock_monsoon/training.py` | Implemented; normalized channel-balanced Huber, explicit uniform/mild lead weights, logged 2→4→8→10 curriculum |
 | Artifact provenance and loading | `src/deadlock_monsoon/checkpoint.py` | Implemented; state-dict-only primary/fallback bundles, config/split/train-stat provenance, SHA-256 verification, CPU load |
-| Automated verification | `tests/` | 39 tests passing at v1.2 ledger update; official schema validator passed all list/b64 scenarios |
+| Real-data training windows | `src/deadlock_monsoon/train_data.py` | Implemented; physical history/targets, static normalization, exact target alignment, last-input-day seasonal pair |
+| Training prototype | `scripts/prototype_train.py` | Implemented and executed on 64 verified training windows, two self-fed leads, seed 7, 10 epochs; evidence is explicitly non-release |
+| Prototype evidence | `reports/training/prototype_seed7.json` | Real-data loss ratio 0.669; finite output, rain minimum 0.499 mm/day, temperature 252.60–308.84 K; 22,630-parameter smoke model |
+| Automated verification | `tests/` | 41 tests passing at v1.2 ledger update; official schema validator passed all list/b64 scenarios |
 | Runtime/training dependency separation | `pyproject.toml` | Implemented; minimal runtime, optional `dev` and `train` groups |
 | Ownership and sequencing | `docs/WORKSTREAMS.md` | Implemented; P0/P1 boundaries and next gate recorded |
 
-Current architectural state is a valid persistence-serving fallback plus an untrained learned-model seam, rollout-aware loss, explicit curriculum, and hash-verified artifact format. It is **not** a competition-ready forecast claim. The next authorized chunk is the real-data training dataset/loader, reproducible trainer, tiny-subset overfit proof, and independently loadable primary/fallback exports. The bounded transport gate is not yet implemented and may begin only after the learned-only P0 path is stable.
+Current architectural state is a valid persistence-serving fallback plus a real-data-tested learned-model seam, rollout-aware loss, explicit curriculum, and hash-verified artifact format. The prototype demonstrates optimization and physical validity only; it is **not** evidence of forecast skill or a competition-ready checkpoint. The next authorized chunk is full chronological validation plumbing, checkpoint selection at days 1/4/8/10, and independently loadable primary/fallback exports. The bounded transport gate is not yet implemented and may begin only after the learned-only P0 path is stable.
 
 ## 21. Custom algorithms and research contributions
 

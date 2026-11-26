@@ -33,6 +33,14 @@ python scripts/evaluate_baselines.py /path/to/india_climate_train.nc --partition
 
 The reader verifies the official SHA-256, full schema, coordinates, channel order, units, finiteness, and rain semantics before evaluation. Calendar climatology and model transforms fit the training partition only. The report covers persistence and climatology at days 1, 4, 8, and 10 with latitude-weighted RMSE, heavy-rain CSI/precision/recall/false alarms, and spatial-variance ratios.
 
+For a bounded real-data optimization smoke test:
+
+```bash
+python scripts/prototype_train.py /path/to/india_climate_train.nc --output reports/training/prototype_seed7.json --windows 64 --epochs 10 --horizon 2
+```
+
+This prototype proves that the shared rollout trains and preserves basic physical validity. It is deliberately labelled non-release evidence and does not establish held-out forecast skill.
+
 ## Architecture progression
 
 1. Keep this persistence engine as the always-runnable contract baseline.
