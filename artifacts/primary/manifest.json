@@ -1,0 +1,62 @@
+{
+  "channel_order": [
+    "t2m",
+    "tp",
+    "u10",
+    "v10",
+    "msl",
+    "tcwv"
+  ],
+  "code_commit": "0d67b0ad8b829447ec16086cc4d6e28bb76205bf",
+  "dataset_sha256": "f37bdbd0bd44e6fe951adf36c9a08620075f9d17de391b04c97d61f06797903b",
+  "model_class": "GRAST",
+  "model_config": {
+    "blocks": 2,
+    "dynamic_channels": 6,
+    "history": 3,
+    "rain_mode": "occurrence_intensity",
+    "rain_occurrence_prior": 0.11176379820743237,
+    "static_channels": 2,
+    "width": 16
+  },
+  "normalization_mean": [
+    292.3252868652344,
+    3.610572338104248,
+    0.9191082715988159,
+    0.19374434649944305,
+    101111.734375,
+    29.856380462646484
+  ],
+  "normalization_scale": [
+    13.449124336242676,
+    7.532521724700928,
+    2.896388053894043,
+    2.4359092712402344,
+    617.4280395507812,
+    20.40909767150879
+  ],
+  "role": "primary",
+  "schema_version": 1,
+  "split": {
+    "test_end": "2021-12-31",
+    "train_end": "2017-12-31",
+    "validation_end": "2019-12-31"
+  },
+  "training": {
+    "best_epoch": 4,
+    "evidence_report": "scaled_seed17.json",
+    "geography_mode": "static",
+    "lead_weights": "uniform",
+    "rain_loss": {
+      "occurrence_weight": 0.5,
+      "positive_class_weight": 1.0,
+      "tail_weight": 0.3,
+      "threshold_mm": 10.0,
+      "train_occurrence_prior": 0.11176379820743237
+    },
+    "seed": 17,
+    "train_windows": 1024,
+    "validation_windows": 256
+  },
+  "weights_sha256": "b26e8c0736cc6b7450a951ccee5257eb62cca932c03660022ea8dc0d136705c0"
+}
