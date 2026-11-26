@@ -41,6 +41,8 @@ python scripts/prototype_train.py /path/to/india_climate_train.nc --output repor
 
 This prototype proves that the shared rollout trains and preserves basic physical validity. It is deliberately labelled non-release evidence and does not establish held-out forecast skill.
 
+Chronological candidate training is available through `scripts/train_candidate.py`. Generated reports and checkpoints are ignored by Git until a release candidate passes physical validity, day-8 anti-blur, heavy-rain activity, and rollout-aware days 1/4/8/10 selection gates.
+
 ## Architecture progression
 
 1. Keep this persistence engine as the always-runnable contract baseline.
