@@ -93,3 +93,11 @@ def test_rollout_can_return_auxiliary_raw_heads_for_training_only():
     assert rollout.shape == (1, 2, 6, 32, 36)
     assert raw.shape == (1, 2, 7, 32, 36)
 
+
+def test_occurrence_head_bias_starts_at_declared_training_prior():
+    prior = 0.12
+    model = GRAST(
+        GRASTConfig(width=16, blocks=2, rain_mode="occurrence_intensity", rain_occurrence_prior=prior)
+    )
+    assert torch.sigmoid(model.head.bias[1]).item() == pytest.approx(prior)
+

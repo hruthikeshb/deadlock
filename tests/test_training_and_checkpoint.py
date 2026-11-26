@@ -118,3 +118,20 @@ def test_direct_occurrence_logits_receive_gradients():
     result.total.backward()
     assert logits.grad is not None and torch.isfinite(logits.grad).all()
 
+
+def test_occurrence_weight_is_fixed_not_batch_prevalence_dependent():
+    prediction = torch.zeros(1, 1, 6, 32, 36)
+    logits = torch.zeros(1, 1, 32, 36)
+    sparse = torch.zeros_like(prediction)
+    dense = torch.zeros_like(prediction)
+    sparse[:, :, 1, 0, 0] = 20.0
+    dense[:, :, 1, :16] = 20.0
+    config = RainLossConfig(occurrence_weight=1.0, positive_class_weight=1.0)
+    sparse_loss = rollout_huber_loss(
+        prediction, sparse, torch.ones(6), rain=config, rain_occurrence_logits=logits
+    ).rain_occurrence
+    dense_loss = rollout_huber_loss(
+        prediction, dense, torch.ones(6), rain=config, rain_occurrence_logits=logits
+    ).rain_occurrence
+    assert torch.allclose(sparse_loss, dense_loss)
+

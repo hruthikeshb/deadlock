@@ -43,19 +43,34 @@ def evaluate(model, mapper, loader, mean, scale) -> tuple[dict, object]:
     predictions = []
     targets = []
     persistences = []
+    occurrence_probabilities = []
+    conditional_intensities = []
+    has_occurrence_head = model.config.rain_mode == "occurrence_intensity"
     model.eval()
     with torch.inference_mode():
         for batch in loader:
-            output = autoregressive_rollout(
+            result = autoregressive_rollout(
                 model, mapper, batch["history"], batch["static"], batch["doy_sincos"],
-                10, mean, scale,
+                10, mean, scale, return_raw=has_occurrence_head,
             )
+            if has_occurrence_head:
+                output, raw = result
+                occurrence_probabilities.append(torch.sigmoid(raw[:, :, 1]).numpy())
+                conditional_intensities.append(torch.nn.functional.softplus(raw[:, :, 2]).numpy())
+            else:
+                output = result
             predictions.append(output.numpy())
             targets.append(batch["target"].numpy())
             persistences.append(batch["history"][:, -1].numpy())
     prediction = np.concatenate(predictions)
     target = np.concatenate(targets)
     persistence = np.concatenate(persistences)
+    occurrence_probability = (
+        np.concatenate(occurrence_probabilities) if has_occurrence_head else None
+    )
+    conditional_intensity = (
+        np.concatenate(conditional_intensities) if has_occurrence_head else None
+    )
     finite = bool(np.isfinite(prediction).all())
     physical = bool(
         finite
@@ -79,6 +94,17 @@ def evaluate(model, mapper, loader, mean, scale) -> tuple[dict, object]:
             "persistence_rain": critical_success_index(persist[:, 1], truth[:, 1]),
             "variance_ratio": spatial_variance_ratio(pred, truth).tolist(),
         }
+        if has_occurrence_head:
+            truth_event = truth[:, 1] > 10.0
+            probability = occurrence_probability[:, lead - 1]
+            intensity = conditional_intensity[:, lead - 1]
+            report["leads"][str(lead)]["occurrence_head"] = {
+                "mean_probability": float(probability.mean()),
+                "target_event_rate": float(truth_event.mean()),
+                "brier_score": float(np.mean((probability - truth_event) ** 2)),
+                "mean_conditional_intensity_mm": float(intensity.mean()),
+                "predicted_rain_event_rate": float((pred[:, 1] > 10.0).mean()),
+            }
     day8_ratios = np.asarray(report["leads"]["8"]["variance_ratio"])
     passes_anti_blur = bool(np.isfinite(day8_ratios).all() and np.all(day8_ratios >= 0.40)
                             and np.all(day8_ratios <= 2.50))
@@ -129,6 +155,7 @@ def run(args: argparse.Namespace) -> dict:
     validation_data = ForecastWindowDataset(
         climate, validation_rows, transform, horizon=10, geography_mode=args.geography_mode
     )
+    train_rain_occurrence_prior = float((climate.data[masks["train"], 1] > 10.0).mean())
     train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
     validation_loader = DataLoader(
         validation_data, batch_size=args.validation_batch_size, shuffle=False, num_workers=0
@@ -138,6 +165,7 @@ def run(args: argparse.Namespace) -> dict:
         blocks=args.blocks,
         rain_mode=args.rain_mode,
         static_channels=train_data.static.shape[0],
+        rain_occurrence_prior=train_rain_occurrence_prior,
     )
     model = GRAST(config)
     mapper = SemanticOutputMapper(torch.from_numpy(transform.scale), rain_mode=args.rain_mode)
@@ -162,7 +190,7 @@ def run(args: argparse.Namespace) -> dict:
         rain_loss = RainLossConfig(
             occurrence_weight=args.rain_occurrence_weight,
             tail_weight=args.rain_tail_weight,
-            max_positive_class_weight=args.rain_positive_class_cap,
+            positive_class_weight=args.rain_positive_class_weight,
         )
         for batch in train_loader:
             prediction, raw_outputs = autoregressive_rollout(
@@ -216,8 +244,9 @@ def run(args: argparse.Namespace) -> dict:
         "rain_loss": {
             "occurrence_weight": args.rain_occurrence_weight,
             "tail_weight": args.rain_tail_weight,
-            "positive_class_cap": args.rain_positive_class_cap,
+            "positive_class_weight": args.rain_positive_class_weight,
             "threshold_mm": 10.0,
+            "train_occurrence_prior": train_rain_occurrence_prior,
         },
         "best_epoch": best_epoch,
         "best_selection": None if best_score is None else asdict(best_score),
@@ -250,7 +279,12 @@ def main() -> None:
     parser.add_argument("--lead-weights", choices=("uniform", "mild_increase"), default="uniform")
     parser.add_argument("--rain-occurrence-weight", type=float, default=0.0)
     parser.add_argument("--rain-tail-weight", type=float, default=0.0)
-    parser.add_argument("--rain-positive-class-cap", type=float, default=20.0)
+    parser.add_argument(
+        "--rain-positive-class-weight",
+        type=float,
+        default=1.0,
+        help="Fixed BCE positive weight established without validation/test data",
+    )
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--threads", type=int, default=4)
     args = parser.parse_args()

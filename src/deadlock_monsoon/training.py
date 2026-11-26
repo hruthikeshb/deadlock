@@ -23,15 +23,15 @@ class RainLossConfig:
     occurrence_weight: float = 0.0
     tail_weight: float = 0.0
     occurrence_temperature_mm: float = 2.0
-    max_positive_class_weight: float = 20.0
+    positive_class_weight: float = 1.0
 
     def validate(self) -> None:
         if self.threshold_mm <= 0 or self.occurrence_temperature_mm <= 0:
             raise ValueError("rain thresholds/temperature must be positive")
         if self.occurrence_weight < 0 or self.tail_weight < 0:
             raise ValueError("rain loss weights must be nonnegative")
-        if self.max_positive_class_weight < 1:
-            raise ValueError("positive-class cap must be at least one")
+        if self.positive_class_weight <= 0:
+            raise ValueError("positive-class weight must be positive")
 
 
 def normalized_lead_weights(horizon: int, mode: str = "uniform") -> torch.Tensor:
@@ -100,11 +100,14 @@ def rollout_huber_loss(
     target_rain = target_physical[:, :, 1]
     event = (target_rain > rain_config.threshold_mm).to(prediction_physical.dtype)
     event_count = event.sum()
-    non_event_count = event.numel() - event_count
-    positive_weight = torch.clamp(
-        non_event_count / torch.clamp(event_count, min=1.0),
-        min=1.0,
-        max=rain_config.max_positive_class_weight,
+    # Keep this fixed across batches. A batch-derived inverse-frequency weight
+    # changes the probability calibration as event prevalence fluctuates and
+    # produced excess false alarms in long rollouts. The caller may supply a
+    # value established from the training partition only; one is calibrated BCE.
+    positive_weight = torch.as_tensor(
+        rain_config.positive_class_weight,
+        dtype=prediction_physical.dtype,
+        device=prediction_physical.device,
     )
     if rain_occurrence_logits is None:
         occurrence_logits = (

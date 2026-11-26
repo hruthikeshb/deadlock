@@ -6,6 +6,7 @@ time-boxed P1 ablation against this stable learned-only control.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import torch
@@ -21,6 +22,7 @@ class GRASTConfig:
     width: int = 48
     blocks: int = 4
     rain_mode: str = "softplus"
+    rain_occurrence_prior: float = 0.1
 
 
 class ResidualBlock(nn.Module):
@@ -43,6 +45,8 @@ class GRAST(nn.Module):
         super().__init__()
         if config.rain_mode not in {"softplus", "occurrence_intensity"}:
             raise ValueError("unsupported rain mode")
+        if not 0.0 < config.rain_occurrence_prior < 1.0:
+            raise ValueError("rain occurrence prior must be between zero and one")
         self.config = config
         inputs = config.history * config.dynamic_channels + config.static_channels + 2
         self.encoder = nn.Conv2d(inputs, config.width, 3, padding=1, padding_mode="replicate")
@@ -51,6 +55,10 @@ class GRAST(nn.Module):
         self.fuse = nn.Conv2d(config.width * 2, config.width, 1)
         output_channels = config.dynamic_channels + int(config.rain_mode == "occurrence_intensity")
         self.head = nn.Conv2d(config.width, output_channels, 1)
+        if config.rain_mode == "occurrence_intensity":
+            prior_logit = math.log(config.rain_occurrence_prior / (1.0 - config.rain_occurrence_prior))
+            with torch.no_grad():
+                self.head.bias[1] = prior_logit
 
     def forward(
         self,
