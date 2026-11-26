@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-26",
+  "branch": "feat/p0-foundation",
+  "learned_health_model_name": "grast-primary-2d61064",
+  "schema_validator": {
+    "result": "all checks passed",
+    "canonical_lists": {
+      "no_perturbation_seconds": 2.44,
+      "warm_ocean_seconds": 2.33,
+      "zeros_seconds": 2.31
+    },
+    "tolerated_base64": {
+      "no_perturbation_seconds": 2.23,
+      "warm_ocean_seconds": 2.28,
+      "zeros_seconds": 2.30
+    }
+  },
+  "repo_scan": {
+    "points": 14.0,
+    "anti_cheat_points": 8.0,
+    "code_health_points": 6.0,
+    "flags": [],
+    "training_pipeline": true,
+    "frontend_present": false,
+    "server_separate_from_ui": true,
+    "readme": true,
+    "checkpoint": true
+  },
+  "decision": "learned API contract passes; frontend remains outstanding"
+}

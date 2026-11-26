@@ -12,6 +12,7 @@ Authoritative requirements: `docs/PRODUCT_REQUIREMENTS.md`
 - Seed 17 is the provisional primary candidate. Its raw state dict is `artifacts/candidate/grast_seed17.pt` (SHA-256 `711b7287dc4df52f609d35e674cce8e6e44d2bdccc008845eb92e0d8036a4d2d`); config and evaluation evidence are in `evidence/training/scaled_seed17.json`.
 - `artifacts/primary` is the hash-verified, self-describing runtime bundle. `serve.py` now loads it as the primary engine and falls back to persistence if verification/loading fails.
 - `evidence/diagnostics/perturbation_seed17_summary.json` records the passing 370-scenario validation-only unfamiliar-shock matrix.
+- `evidence/release/official_checks.json` records the official validator pass against the learned engine and the flag-free 14/15 repository scan.
 - The locked test has not been used for checkpoint selection or evaluation.
 - Run `python -m pytest -q`; the expected result at handoff is 59 passing tests.
 
@@ -27,11 +28,10 @@ Authoritative requirements: `docs/PRODUCT_REQUIREMENTS.md`
 ## Remaining work in order
 
 1. Export and verify an independently usable fallback bundle (the persistence runtime fallback already remains available).
-2. Run official validator and scanner against the learned engine for steps 1, 10, and 14, both list and base64 inputs.
-3. Benchmark cold start, ten-step latency, peak RSS, response size, eight-call soak, network-disabled execution, and read-only repository behavior on four CPU cores.
-4. Only after items 1–3 pass, perform the one-time locked 2020–2021 test evaluation and freeze the candidate. Do not tune after viewing locked-test results.
-5. Complete attribution and README commands, then run a clean-clone release rehearsal.
-6. Build the separate live dashboard and required two-page brief after the inference artifact and API are frozen.
+2. Benchmark explicit steps 1/10/14, cold start, peak RSS, response size, eight-call soak, network-disabled execution, and read-only repository behavior on four CPU cores.
+3. Only after items 1–2 pass, perform the one-time locked 2020–2021 test evaluation and freeze the candidate. Do not tune after viewing locked-test results.
+4. Complete attribution and README commands, then run a clean-clone release rehearsal.
+5. Build the separate live dashboard and required two-page brief after the inference artifact and API are frozen; this is the one missing repository-scanner point.
 
 ## Stop rules
 
