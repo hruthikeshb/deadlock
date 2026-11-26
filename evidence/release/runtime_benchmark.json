@@ -1,0 +1,140 @@
+{
+  "acceptance": {
+    "all_finite": true,
+    "all_horizons_1_through_14": true,
+    "all_requests_under_5_seconds": true,
+    "deterministic_interleaved": true,
+    "ready_under_120_seconds": true,
+    "responses_under_80_mb": true,
+    "rss_under_6_gb": true
+  },
+  "all_horizons_1_through_14": {
+    "1": true,
+    "10": true,
+    "11": true,
+    "12": true,
+    "13": true,
+    "14": true,
+    "2": true,
+    "3": true,
+    "4": true,
+    "5": true,
+    "6": true,
+    "7": true,
+    "8": true,
+    "9": true
+  },
+  "cold_start_ms": 4628.552300000592,
+  "health": {
+    "model_name": "grast-primary-2d61064",
+    "status": "ready"
+  },
+  "horizons": {
+    "1": {
+      "finite": true,
+      "http_ms": 29.630600001837593,
+      "reported_inference_ms": 15.20669999808888,
+      "response_bytes": 128278,
+      "sha256": "de4ef7d4e0d30b307e3b16191919ef77fd64b7689e39a31d3b78a546b8db8df5",
+      "shape": [
+        1,
+        6,
+        32,
+        36
+      ]
+    },
+    "10": {
+      "finite": true,
+      "http_ms": 188.57799999750569,
+      "reported_inference_ms": 40.24829999980284,
+      "response_bytes": 1272215,
+      "sha256": "23786597159a8b8911e0889a1bfb20c6f52e43483c5f3165fa5ce63c1afa4a67",
+      "shape": [
+        10,
+        6,
+        32,
+        36
+      ]
+    },
+    "14": {
+      "finite": true,
+      "http_ms": 265.48299999922165,
+      "reported_inference_ms": 65.65010000122129,
+      "response_bytes": 1779739,
+      "sha256": "a17d8e72c5e271c1086f4c9edacf666d55e0c0bff0e6f7852e7f443161ecec65",
+      "shape": [
+        14,
+        6,
+        32,
+        36
+      ]
+    }
+  },
+  "peak_rss_bytes": 243216384,
+  "soak": [
+    {
+      "finite": true,
+      "http_ms": 234.2766000001575,
+      "index": 0,
+      "response_bytes": 1272216,
+      "sha256": "23786597159a8b8911e0889a1bfb20c6f52e43483c5f3165fa5ce63c1afa4a67",
+      "shocked": false
+    },
+    {
+      "finite": true,
+      "http_ms": 263.0922999996983,
+      "index": 1,
+      "response_bytes": 1272251,
+      "sha256": "87019354f85b17b9ff3deb5a339ccf334ecbf8cb032175ab054ebe5eb960646f",
+      "shocked": true
+    },
+    {
+      "finite": true,
+      "http_ms": 328.6329000002297,
+      "index": 2,
+      "response_bytes": 1272216,
+      "sha256": "23786597159a8b8911e0889a1bfb20c6f52e43483c5f3165fa5ce63c1afa4a67",
+      "shocked": false
+    },
+    {
+      "finite": true,
+      "http_ms": 239.08659999869997,
+      "index": 3,
+      "response_bytes": 1272251,
+      "sha256": "87019354f85b17b9ff3deb5a339ccf334ecbf8cb032175ab054ebe5eb960646f",
+      "shocked": true
+    },
+    {
+      "finite": true,
+      "http_ms": 224.50690000187024,
+      "index": 4,
+      "response_bytes": 1272215,
+      "sha256": "23786597159a8b8911e0889a1bfb20c6f52e43483c5f3165fa5ce63c1afa4a67",
+      "shocked": false
+    },
+    {
+      "finite": true,
+      "http_ms": 290.48929999771644,
+      "index": 5,
+      "response_bytes": 1272251,
+      "sha256": "87019354f85b17b9ff3deb5a339ccf334ecbf8cb032175ab054ebe5eb960646f",
+      "shocked": true
+    },
+    {
+      "finite": true,
+      "http_ms": 170.56540000339737,
+      "index": 6,
+      "response_bytes": 1272215,
+      "sha256": "23786597159a8b8911e0889a1bfb20c6f52e43483c5f3165fa5ce63c1afa4a67",
+      "shocked": false
+    },
+    {
+      "finite": true,
+      "http_ms": 283.0050000011397,
+      "index": 7,
+      "response_bytes": 1272251,
+      "sha256": "87019354f85b17b9ff3deb5a339ccf334ecbf8cb032175ab054ebe5eb960646f",
+      "shocked": true
+    }
+  ]
+}

@@ -13,6 +13,7 @@ Authoritative requirements: `docs/PRODUCT_REQUIREMENTS.md`
 - `artifacts/primary` is the hash-verified, self-describing runtime bundle. `serve.py` now loads it as the primary engine and falls back to persistence if verification/loading fails.
 - `evidence/diagnostics/perturbation_seed17_summary.json` records the passing 370-scenario validation-only unfamiliar-shock matrix.
 - `evidence/release/official_checks.json` records the official validator pass against the learned engine and the flag-free 14/15 repository scan.
+- `evidence/release/runtime_benchmark.json` records learned HTTP horizons 1–14, explicit 1/10/14 timings, memory, response size, and an eight-call deterministic interleaved soak.
 - The locked test has not been used for checkpoint selection or evaluation.
 - Run `python -m pytest -q`; the expected result at handoff is 59 passing tests.
 
@@ -28,9 +29,9 @@ Authoritative requirements: `docs/PRODUCT_REQUIREMENTS.md`
 ## Remaining work in order
 
 1. Export and verify an independently usable fallback bundle (the persistence runtime fallback already remains available).
-2. Benchmark explicit steps 1/10/14, cold start, peak RSS, response size, eight-call soak, network-disabled execution, and read-only repository behavior on four CPU cores.
+2. Run true network-disabled and read-only-repository validation in a container/CI environment; Docker is unavailable on the current workstation.
 3. Only after items 1–2 pass, perform the one-time locked 2020–2021 test evaluation and freeze the candidate. Do not tune after viewing locked-test results.
-4. Complete attribution and README commands, then run a clean-clone release rehearsal.
+4. Pin offline dependencies, complete attribution and README commands, then run a clean-clone release rehearsal.
 
 ## Explicitly excluded from this workstream
 
