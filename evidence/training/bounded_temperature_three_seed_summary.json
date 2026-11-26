@@ -1,0 +1,13 @@
+{
+  "status": "retain",
+  "configuration_frozen": true,
+  "locked_test_opened": false,
+  "packaged_primary_replaced": false,
+  "seeds": {
+    "7": {"old_aggregate_normalized_rmse": 0.5244, "new_aggregate_normalized_rmse": 0.5027, "day4_temperature_rmse_k": 1.941, "day4_persistence_temperature_rmse_k": 1.936, "day8_rain_csi": 0.289, "day8_rain_variance_ratio": 0.561},
+    "17": {"old_aggregate_normalized_rmse": 0.5095, "new_aggregate_normalized_rmse": 0.5033, "day4_temperature_rmse_k": 1.880, "day4_persistence_temperature_rmse_k": 1.873, "day8_rain_csi": 0.283, "day8_rain_variance_ratio": 0.616},
+    "29": {"old_aggregate_normalized_rmse": 0.5323, "new_aggregate_normalized_rmse": 0.5087, "day4_temperature_rmse_k": 1.924, "day4_persistence_temperature_rmse_k": 1.908, "day8_rain_csi": 0.293, "day8_rain_variance_ratio": 0.560}
+  },
+  "all_three_seeds_pass_joint_gates": true,
+  "decision": "retain bounded temperature tendency; seed 7 currently has the best aggregate validation score"
+}

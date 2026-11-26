@@ -1,5 +1,5 @@
 {
-  "status": "scaled challenger; not promoted pending seeds 7 and 29",
+  "status": "three-seed validated architecture; packaged primary not yet replaced",
   "seed": 17,
   "train_windows": 1024,
   "validation_windows": 256,
