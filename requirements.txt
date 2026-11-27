@@ -1,0 +1,38 @@
+# ============================================================
+# requirements.txt — Multiverse of Monsoon (Track 2)
+# Pinned to exact versions used during development & testing.
+# All packages below are available in the offline evaluation
+# sandbox (torch CPU build, no GPU required).
+# ============================================================
+
+# --- Deep Learning ---
+torch==2.15.0
+
+# --- Numerical / Scientific ---
+numpy==2.5.5
+scipy==1.18.1
+
+# --- Data & NetCDF ---
+pandas==3.1.1
+xarray==2026.9.0
+h5py==3.16.0
+h5netcdf==1.8.3
+netCDF4==1.7.5.1.post1
+cftime==1.6.6.1
+
+# --- Machine Learning ---
+scikit-learn==1.9.1
+lightgbm==4.7.0
+onnxruntime==1.32.0
+
+# --- Web Server ---
+fastapi==0.165.0
+uvicorn==0.54.0
+starlette==1.10.0
+
+# --- HTTP (used by kit validator only, not by serve.py) ---
+requests==2.34.2
+
+# --- Utilities ---
+pydantic==2.14.4
+python-dateutil==4.0.0

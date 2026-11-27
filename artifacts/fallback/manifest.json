@@ -1,0 +1,65 @@
+{
+  "channel_order": [
+    "t2m",
+    "tp",
+    "u10",
+    "v10",
+    "msl",
+    "tcwv"
+  ],
+  "code_commit": "1cea1082fa8c61a87e162632681c37462d783789",
+  "dataset_sha256": "f37bdbd0bd44e6fe951adf36c9a08620075f9d17de391b04c97d61f06797903b",
+  "model_class": "GRAST",
+  "model_config": {
+    "blocks": 2,
+    "dynamic_channels": 6,
+    "history": 3,
+    "rain_mode": "occurrence_intensity",
+    "rain_occurrence_prior": 0.11176379820743237,
+    "static_channels": 2,
+    "temperature_mode": "bounded_residual",
+    "temperature_tendency_factor": 0.05,
+    "width": 16
+  },
+  "normalization_mean": [
+    292.3252868652344,
+    3.610572338104248,
+    0.9191082715988159,
+    0.19374434649944305,
+    101111.734375,
+    29.856380462646484
+  ],
+  "normalization_scale": [
+    13.449124336242676,
+    7.532521724700928,
+    2.896388053894043,
+    2.4359092712402344,
+    617.4280395507812,
+    20.40909767150879
+  ],
+  "role": "fallback",
+  "schema_version": 2,
+  "split": {
+    "test_end": "2021-12-31",
+    "train_end": "2017-12-31",
+    "validation_end": "2019-12-31"
+  },
+  "static_sha256": "afafa17c0998244a2c371d0b3c662bdf28676404f8f61b0a1810252f2be1e539",
+  "training": {
+    "best_epoch": 5,
+    "evidence_report": "fair_resampled_seed7.json",
+    "geography_mode": "static",
+    "lead_weights": "uniform",
+    "rain_loss": {
+      "occurrence_weight": 0.5,
+      "positive_class_weight": 1.0,
+      "tail_weight": 0.3,
+      "threshold_mm": 10.0,
+      "train_occurrence_prior": 0.11176379820743237
+    },
+    "seed": 7,
+    "train_windows": 1024,
+    "validation_windows": 256
+  },
+  "weights_sha256": "d5a5f4b453f1e416d40cca3cccfd556ae073e556766af2e4510e1f39f0d30a80"
+}
