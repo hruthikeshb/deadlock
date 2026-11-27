@@ -15,10 +15,6 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
-      '/initial-conditions': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
     },
   },
 })

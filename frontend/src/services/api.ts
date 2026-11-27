@@ -70,32 +70,6 @@ export async function requestSimulation(
   return (await resp.json()) as SimulationResponse;
 }
 
-/**
- * Data adapter providing historical observational initial conditions.
- * Fetches fixed-date 3-day atmospheric states [3, 6, 32, 36] from the backend,
- * falling back to bundled sample data if unavailable.
- */
-let cachedInitialConditions: InitialAtmosphericData | null = null;
-
-export async function fetchInitialConditions(signal?: AbortSignal): Promise<InitialAtmosphericData> {
-  if (cachedInitialConditions) {
-    return cachedInitialConditions;
-  }
-
-  const resp = await fetch(`${BACKEND_URL}/initial-conditions`, {
-    method: 'GET',
-    signal,
-  });
-
-  if (!resp.ok) {
-    throw new Error(`Failed to load initial conditions (${resp.status})`);
-  }
-
-  const data = (await resp.json()) as InitialAtmosphericData;
-  cachedInitialConditions = data;
-  return data;
-}
-
 export function getInitialConditions(): InitialAtmosphericData {
-  return cachedInitialConditions ?? (initialConditionsRaw as unknown as InitialAtmosphericData);
+  return initialConditionsRaw as unknown as InitialAtmosphericData;
 }

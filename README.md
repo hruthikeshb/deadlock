@@ -86,12 +86,16 @@ Output: z_{t+1} = z_{t} + r ⊙ Δz    (applied in normalized space)
 │
 ├── artifacts/
 │   ├── primary_grast.pt        # ✅ Trained model weights (plain git, ~5.4 MB)
+│   ├── serve_static.npy        # Land-sea mask and orography for inference
+│   ├── serve_lats.npy          # Latitude centres for geo features
+│   ├── serve_lons.npy          # Longitude centres for geo features
 │   ├── training_log.jsonl      # Per-epoch training metrics
-│   └── benchmark_report.json  # Full evaluation report (locked test 2020–2021)
+│   ├── benchmark_report.json   # Local benchmark report
+│   └── Multiverse_of_Monsoon_2_page_brief.pdf
 │
 ├── data/
-│   ├── india_climate_train.nc  # Daily climate data 2005–2021 (32×36 grid)
-│   └── stats.json              # Channel-wise mean & std (used only inside the model)
+│   ├── india_climate_train.nc  # Local-only training/evaluation data; do not commit
+│   └── stats.json              # Channel-wise mean & std; required at inference
 │
 ├── src/
 │   ├── data/
@@ -109,6 +113,7 @@ Output: z_{t+1} = z_{t} + r ⊙ Δz    (applied in normalized space)
 ├── training/
 │   ├── train.py                # Training entrypoint
 │   ├── evaluate.py             # Comprehensive evaluation suite
+│   ├── splits.json             # Explicit chronological train/val/test boundaries
 │   └── kaggle_train.ipynb      # Kaggle notebook version
 │
 └── tests/
@@ -132,7 +137,7 @@ pip install -r requirements.txt
 python serve.py --port 8000
 ```
 
-The server loads weights from `artifacts/primary_grast.pt` once at startup and listens on `0.0.0.0:8000`.
+The server loads weights, normalization statistics, and the small static geography arrays once at startup, then listens on `0.0.0.0:8000`. The multi-year NetCDF archive is only needed for training and offline evaluation.
 
 ### 3. Validate with the kit validator
 
@@ -257,7 +262,7 @@ The server exposes two endpoints:
 | 4 | `msl` | Pa | Mean sea-level pressure |
 | 5 | `tcwv` | kg/m² | Total column water vapour (always ≥ 0) |
 
-**Static fields** (bundled in `data/india_climate_train.nc`, loaded at startup):
+**Static fields** (bundled as small arrays in `artifacts/`, loaded at startup):
 
 | Field | Description |
 |---|---|

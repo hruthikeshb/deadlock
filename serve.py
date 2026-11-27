@@ -33,11 +33,10 @@ from fastapi.middleware.cors import CORSMiddleware
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from src.data.dataset import Transform, N_CHANNELS, GRID_H, GRID_W, CHANNELS
+from src.data.dataset import Transform, GRID_H, GRID_W
 from src.features.geo import build_geo_features
 from src.models.grast import GRAST, FallbackCNN, C_IN
 from src.rollout.engine import RolloutEngine
-from src.data.hdf5_reader import load_nc_arrays
 
 # ---------------------------------------------------------------------------
 # Load model ONCE at import time
@@ -60,30 +59,18 @@ else:
 _model.load_state_dict(ckpt["state_dict"])
 _model.eval()
 
-# Load static fields for geo features (land-sea mask + orography)
-_nc_arrays  = load_nc_arrays(ROOT / "data" / "india_climate_train.nc")
-_static     = _nc_arrays["static"].astype("float32")          # [2, 32, 36]
-_lats       = _nc_arrays["lat"].astype("float32")              # [32]
-_lons       = _nc_arrays["lon"].astype("float32")              # [36]
-_geo_np     = build_geo_features(_static[0], _static[1], _lats, _lons)  # [6,32,36]
+# Bundle only the static geography needed for inference, not the historical archive.
+_static = np.load(ROOT / "artifacts" / "serve_static.npy", allow_pickle=False).astype("float32")
+_lats = np.load(ROOT / "artifacts" / "serve_lats.npy", allow_pickle=False).astype("float32")
+_lons = np.load(ROOT / "artifacts" / "serve_lons.npy", allow_pickle=False).astype("float32")
+if _static.shape != (2, GRID_H, GRID_W):
+    raise ValueError(f"Expected static fields with shape {(2, GRID_H, GRID_W)}, got {_static.shape}")
+if _lats.shape != (GRID_H,) or _lons.shape != (GRID_W,):
+    raise ValueError(f"Expected latitude/longitude shapes {(GRID_H,)} and {(GRID_W,)}")
 
-_transform  = Transform()
-_engine     = RolloutEngine(_model, _transform, _geo_np, torch.device("cpu"))
-
-# Fixed historical date from the locked test split (2020-07-15, peak monsoon)
-_FIXED_DATE_STR = "2020-07-15"
-import xarray as _xr
-_ds_meta = _xr.open_dataset(ROOT / "data" / "india_climate_train.nc", engine="h5netcdf")
-_dates = _ds_meta["time"].values.astype("datetime64[D]")
-_ds_meta.close()
-_date_matches = np.where(_dates == np.datetime64(_FIXED_DATE_STR, "D"))[0]
-_fixed_idx = int(_date_matches[0]) if len(_date_matches) > 0 else int(len(_dates) - 11)
-_fixed_date = str(_dates[_fixed_idx])
-_fixed_init_states = _nc_arrays["data"][_fixed_idx - 2 : _fixed_idx + 1].astype("float32")  # [3, 6, 32, 36]
-_yr_start = _dates[_fixed_idx].astype("datetime64[Y]").astype("datetime64[D]")
-_doy = int((_dates[_fixed_idx] - _yr_start).astype(int)) + 1
-_angle = 2.0 * np.pi * _doy / 365.0
-_fixed_doy_sincos = [float(np.sin(_angle)), float(np.cos(_angle))]
+_geo_np = build_geo_features(_static[0], _static[1], _lats, _lons)
+_transform = Transform(ROOT / "data" / "stats.json")
+_engine = RolloutEngine(_model, _transform, _geo_np, torch.device("cpu"))
 
 # ---------------------------------------------------------------------------
 # FastAPI app
@@ -109,29 +96,6 @@ def _arr(x) -> np.ndarray:
 @app.post("/health")
 def health():
     return {"status": "ready", "model_name": _model_name}
-
-
-@app.get("/initial-conditions")
-def initial_conditions():
-    return {
-        "date": _fixed_date,
-        "init_states": _fixed_init_states.tolist(),
-        "doy_sincos": _fixed_doy_sincos,
-        "metadata": {
-            "lats": _lats.tolist(),
-            "lons": _lons.tolist(),
-            "channels": CHANNELS,
-            "units": {
-                "t2m": "K",
-                "tp": "mm/day",
-                "u10": "m/s",
-                "v10": "m/s",
-                "msl": "Pa",
-                "tcwv": "kg/m2",
-            },
-            "description": f"ERA5 / IMD 3-day observational state ending {_fixed_date} (32x36 grid)",
-        },
-    }
 
 
 @app.post("/simulate")

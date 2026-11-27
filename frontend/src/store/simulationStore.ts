@@ -7,7 +7,7 @@ import type {
 } from '../types/weather';
 import {
   checkBackendHealth,
-  fetchInitialConditions,
+  getInitialConditions,
   isSupportedForecastModel,
   requestSimulation,
   type SimulationPayload,
@@ -205,7 +205,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({ isLoadingPrime: true, errorMessage: null });
 
     try {
-      const initData = await fetchInitialConditions();
+      const initData = getInitialConditions();
       const payload: SimulationPayload = {
         init_states: initData.init_states,
         doy_sincos: initData.doy_sincos,
@@ -296,7 +296,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({ isLoadingMultiverse: true, errorMessage: null });
 
     try {
-      const initData = await fetchInitialConditions();
+      const initData = getInitialConditions();
       const payload: SimulationPayload = {
         init_states: initData.init_states,
         doy_sincos: initData.doy_sincos,
@@ -348,7 +348,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     );
 
     try {
-      const initData = await fetchInitialConditions();
+      const initData = getInitialConditions();
       const [resNull, resZero] = await Promise.all([
         requestSimulation({
           init_states: initData.init_states,

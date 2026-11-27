@@ -1,3 +1,24 @@
 .venv/
-data/
+__pycache__/
+*.py[cod]
 
+# Keep the small normalization file; do not commit the multi-year NetCDF archive.
+/data/*
+!/data/stats.json
+
+# Local builds and generated demo extracts.
+frontend/node_modules/
+frontend/dist/
+artifacts/serve_init.npy
+artifacts/serve_meta.json
+
+# Non-submission experiment checkpoints and reports.
+artifacts/fallback/
+artifacts/primary/
+artifacts/benchmark_report_v2.json
+artifacts/eval_report.json
+artifacts/eval_report_v2.json
+artifacts/eval_monsoon_net_independent.json
+artifacts/primary_grast_v2.pt
+artifacts/monsoon_net_best.pt
+eval_monsoon_net_independent.py
